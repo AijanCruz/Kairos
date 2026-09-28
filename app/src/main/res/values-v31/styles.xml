@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.CampusFlow" parent="Base.Theme.CampusFlow">
+        <item name="android:windowSplashScreenBackground">#F6F8F4</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher</item>
+    </style>
+</resources>

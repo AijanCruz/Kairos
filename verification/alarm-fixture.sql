@@ -1,0 +1,2 @@
+.timeout 30000
+PRAGMA foreign_keys=ON; DELETE FROM schedules WHERE notes='Test fixture' AND title LIKE 'CampusFlow % Verification%'; INSERT INTO schedules(title,category,startDay,startMinute,durationMinutes,repeat,weekdays,endDay,reminderMinutes,notes,subjectId,routineId,active) VALUES('CampusFlow Reboot Verification 1790564231','PERSONAL',20724,181,30,'ONCE','',NULL,0,'Test fixture',NULL,NULL,1); SELECT last_insert_rowid();
