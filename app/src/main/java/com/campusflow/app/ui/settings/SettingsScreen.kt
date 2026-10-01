@@ -21,18 +21,17 @@ import com.campusflow.app.ui.AppViewModel
 import com.campusflow.app.ui.components.*
 import java.time.LocalDate
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 @Composable
 fun SettingsScreen(vm: AppViewModel, preferences: UserPreferences, onBack: () -> Unit) {
     var importUri by rememberSaveable { mutableStateOf<String?>(null) }
     var clearDialog by rememberSaveable { mutableStateOf(false) }
-    var dataBusy by remember { mutableStateOf(false) }
-    val backup = remember { DataBackup(vm.container.database) }
+    val dataBusy by vm.dataBusy.collectAsStateWithLifecycle()
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        uri?.let { vm.perform {
-            dataBusy = true
-            try { backup.exportTo(vm.container, it); vm.message("Copia exportada") } finally { dataBusy = false }
-        } }
+        uri?.let(vm::exportData)
     }
     val import = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> importUri = uri?.toString() }
     LazyColumn(contentPadding = PaddingValues(20.dp, 12.dp, 20.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -46,7 +45,7 @@ fun SettingsScreen(vm: AppViewModel, preferences: UserPreferences, onBack: () ->
                 ChoiceField("Tema", preferences.appearance, Appearance.entries, { it.label }) { vm.perform { vm.container.preferences.setAppearance(it) } }
                 Row {
                     Column(Modifier.weight(1f)) { Text("Color dinámico", style = MaterialTheme.typography.titleMedium); Text("Colores de tu fondo de pantalla", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Switch(preferences.dynamicColor, { vm.perform { vm.container.preferences.setDynamic(it) } }, enabled = Build.VERSION.SDK_INT >= 31)
+                    Switch(preferences.dynamicColor, { vm.perform { vm.container.preferences.setDynamic(it) } }, enabled = Build.VERSION.SDK_INT >= 31, modifier = Modifier.semantics { contentDescription = "Color dinámico" })
                 }
             }
         }
@@ -68,7 +67,7 @@ fun SettingsScreen(vm: AppViewModel, preferences: UserPreferences, onBack: () ->
                 Text("Sin cuenta, sin anuncios y sin servidores. El OCR se procesa localmente. Las copias automáticas en la nube están desactivadas.", style = MaterialTheme.typography.bodyMedium)
                 Text("La copia manual incluye actividades, materias, rutinas, sesiones e historial. Tú eliges dónde guardarla; las preferencias de apariencia no se incluyen.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (dataBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                OutlinedButton(enabled = !dataBusy, onClick = { export.launch("CampusFlow-${LocalDate.now()}.json") }, modifier = Modifier.fillMaxWidth()) { Text("Exportar copia de datos") }
+                OutlinedButton(enabled = !dataBusy, onClick = { export.launch("Kairos-${LocalDate.now()}.json") }, modifier = Modifier.fillMaxWidth()) { Text("Exportar copia de datos") }
                 OutlinedButton(enabled = !dataBusy, onClick = { import.launch(arrayOf("application/json", "text/plain")) }, modifier = Modifier.fillMaxWidth()) { Text("Restaurar copia") }
                 TextButton(enabled = !dataBusy, onClick = { clearDialog = true }, modifier = Modifier.fillMaxWidth()) { Text("Borrar todos los datos", color = MaterialTheme.colorScheme.error) }
             }
@@ -76,31 +75,22 @@ fun SettingsScreen(vm: AppViewModel, preferences: UserPreferences, onBack: () ->
         item { SectionLabel("ACERCA DE") }
         item {
             SettingsCard {
-                Text("CampusFlow", style = MaterialTheme.typography.titleLarge)
+                Text("Kairos", style = MaterialTheme.typography.titleLarge)
                 Text("Tu día, con intención.\nVersión ${BuildConfig.VERSION_NAME} · Android 8 o superior", style = MaterialTheme.typography.bodyMedium)
                 Text("Hecho con Kotlin, Compose, Room y ML Kit. Revisa siempre los resultados del OCR antes de importar un horario.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
     importUri?.let { uri -> AlertDialog(onDismissRequest = { importUri = null }, title = { Text("¿Restaurar esta copia?") }, text = { Text("Reemplazará todos los datos actuales. Exporta una copia antes si quieres conservarlos. Las alarmas se reprogramarán.") }, confirmButton = {
-        TextButton(onClick = {
-            importUri = null; dataBusy = true
-            vm.perform {
-                try {
-                    val json = backup.readFrom(vm.container, uri.toUri())
-                    vm.container.reminders.replaceData { backup.restore(json) }
-                    vm.message("Copia restaurada")
-                } finally { dataBusy = false; vm.container.refreshReminders() }
-            }
+        TextButton(enabled = !dataBusy, onClick = {
+            importUri = null
+            vm.restoreData(uri.toUri())
         }) { Text("Restaurar") }
     }, dismissButton = { TextButton(onClick = { importUri = null }) { Text("Cancelar") } }) }
     if (clearDialog) AlertDialog(onDismissRequest = { clearDialog = false }, title = { Text("¿Borrar todos los datos?") }, text = { Text("Se eliminarán actividades, materias, rutinas e historial y se cancelarán los recordatorios. Esta acción no se puede deshacer.") }, confirmButton = {
-        TextButton(onClick = {
-            clearDialog = false; dataBusy = true
-            vm.perform {
-                try { vm.container.reminders.replaceData { backup.clear() }; vm.message("Datos eliminados") }
-                finally { dataBusy = false; vm.container.refreshReminders() }
-            }
+        TextButton(enabled = !dataBusy, onClick = {
+            clearDialog = false
+            vm.clearData()
         }) { Text("Borrar", color = MaterialTheme.colorScheme.error) }
     }, dismissButton = { TextButton(onClick = { clearDialog = false }) { Text("Cancelar") } })
 }

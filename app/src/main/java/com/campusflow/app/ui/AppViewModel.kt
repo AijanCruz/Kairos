@@ -1,6 +1,7 @@
 package com.campusflow.app.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.campusflow.app.CampusApp
@@ -30,6 +31,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val feedback = messages.receiveAsFlow()
     val saving = kotlinx.coroutines.flow.MutableStateFlow(false)
     val saveError = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    private val _dataBusy = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val dataBusy: kotlinx.coroutines.flow.StateFlow<Boolean> = _dataBusy
+    private val backup = DataBackup(container.database)
     val notificationTarget = kotlinx.coroutines.flow.MutableStateFlow<Long?>(null)
     val now = kotlinx.coroutines.flow.flow {
         while (true) { emit(java.time.LocalDateTime.now()); kotlinx.coroutines.delay(15_000) }
@@ -42,6 +46,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     suspend fun message(text: String, undo: (suspend () -> Unit)? = null) { messages.send(Feedback(text, undo)) }
+    private fun dataOperation(block: suspend () -> Unit) {
+        if (!_dataBusy.compareAndSet(false, true)) return
+        perform { try { block() } finally { _dataBusy.value = false } }
+    }
+    fun exportData(uri: Uri) = dataOperation {
+        backup.exportTo(container, uri)
+        message("Copia exportada")
+    }
+    fun restoreData(uri: Uri) = dataOperation {
+        try {
+            val json = backup.readFrom(container, uri)
+            container.reminders.replaceData { backup.restore(json) }
+            message("Copia restaurada")
+        } finally { container.refreshReminders() }
+    }
+    fun clearData() = dataOperation {
+        try {
+            container.reminders.replaceData { backup.clear() }
+            message("Datos eliminados")
+        } finally { container.refreshReminders() }
+    }
     fun complete(item: ActivityItem) = perform {
         val previous = repository.complete(item.occurrence.id)
         message("✓ Completado") { repository.restore(previous) }

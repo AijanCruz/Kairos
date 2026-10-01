@@ -28,6 +28,13 @@ class ReminderIntegrationTest {
         val manager = app.getSystemService(NotificationManager::class.java)
         try {
             app.reminders.reconcile()
+            // A failed restore must leave the already queued Android alarm intact.
+            val before = app.database.dao().reminderState(item.occurrence.id)
+            try {
+                app.reminders.replaceData { DataBackup(app.database).restore("{}") }
+                fail("Invalid backup must be rejected")
+            } catch (_: IllegalArgumentException) { }
+            assertEquals(before, app.database.dao().reminderState(item.occurrence.id))
             // Reminder is already due while the activity is in the future: catch-up fires now.
             withTimeout(30_000) {
                 while (manager.activeNotifications.none { it.tag == "activity-${item.occurrence.id}" }) delay(250)

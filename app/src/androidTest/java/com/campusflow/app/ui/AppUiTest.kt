@@ -15,6 +15,7 @@ import org.junit.Assert.*
 import org.junit.runner.RunWith
 import java.io.File
 import java.time.LocalDate
+import com.campusflow.app.domain.pretty
 
 @RunWith(AndroidJUnit4::class)
 class AppUiTest {
@@ -109,6 +110,7 @@ class AppUiTest {
         awaitText("Programación II")
         capture("home-light.png")
         compose.onNodeWithContentDescription("Configuración").performClick()
+        compose.onNodeWithContentDescription("Color dinámico").assertIsToggleable()
         compose.onNodeWithText("Tema", useUnmergedTree = true).performClick()
         compose.onNodeWithText("Oscuro").performClick()
         compose.waitUntil(10_000) { runBlocking { app.preferences.flow.first().appearance == Appearance.DARK } }
@@ -119,6 +121,7 @@ class AppUiTest {
         capture("home-dark.png")
         compose.onNodeWithText("Horario").performClick()
         compose.onNodeWithText("Tu semana").assertExists()
+        compose.onNodeWithContentDescription("${LocalDate.now().pretty()}, con actividades").assertIsSelected().assertHasClickAction()
         capture("schedule-dark.png")
     }
 

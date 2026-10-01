@@ -21,7 +21,7 @@ class CampusRepository(val db: CampusDatabase, private val onChanged: () -> Unit
         generateRange(today - 30, today + 180)
     }
 
-    suspend fun generateRange(from: Long, to: Long) {
+    suspend fun generateRange(from: Long, to: Long) = db.withTransaction {
         require(to - from in 0..730) { "El rango del calendario es demasiado grande." }
         dao.activeSchedules().forEach { schedule ->
             val dates = CalendarRules.dates(schedule.startDay, schedule.endDay, schedule.repeat, schedule.weekdays, from, to)
@@ -34,16 +34,17 @@ class CampusRepository(val db: CampusDatabase, private val onChanged: () -> Unit
     suspend fun saveSchedule(value: Schedule): Long {
         require(value.title.isNotBlank()) { "Escribe un nombre." }
         require(value.startMinute in 0..1439 && value.durationMinutes in 1..1440) { "Revisa la hora y la duración (1–1440 min)." }
-        require(value.reminderMinutes in listOf(-1, 0, 5, 10, 15, 30, 60)) { "Recordatorio inválido." }
-        require(value.repeat != Repeat.WEEKLY.name || value.weekdays.split(',').any { it.toIntOrNull() in 1..7 }) { "Selecciona al menos un día." }
-        require(value.endDay == null || value.endDay >= value.startDay) { "La fecha final debe ser posterior al inicio." }
+        require(value.reminderMinutes in com.campusflow.app.domain.ReminderOptions) { "Recordatorio inválido." }
+        CalendarRules.validateRule(value.startDay, value.endDay, value.repeat, value.weekdays)
         val result = db.withTransaction {
             dao.insertCategories(Categories.defaults)
             val existing = if (value.id == 0L) null else dao.schedule(value.id)
+            require(value.id == 0L || existing?.active == true) { "La serie cambió. Vuelve a abrirla antes de editar." }
             val actualId: Long
             if (existing != null && existing.repeat != Repeat.ONCE.name) {
                 // Version a recurring rule so past results and moved exceptions retain their data.
                 val start = maxOf(value.startDay, LocalDate.now().toEpochDay())
+                CalendarRules.validateRule(start, value.endDay, value.repeat, value.weekdays)
                 val occurrences = dao.seriesOccurrences(existing.id)
                 dao.saveSchedule(existing.copy(active = false))
                 actualId = dao.saveSchedule(value.copy(id = 0, title = value.title.trim(), startDay = start))
@@ -95,7 +96,8 @@ class CampusRepository(val db: CampusDatabase, private val onChanged: () -> Unit
 
     suspend fun restore(old: Occurrence, expectedStatus: String = Status.DONE) {
         db.withTransaction {
-            require(dao.occurrence(old.id)?.status == expectedStatus) { "La actividad cambió. Ya no se puede deshacer esta acción." }
+            val current = dao.occurrence(old.id)
+            require(current?.status == expectedStatus && current.copy(status = old.status, completedAt = old.completedAt) == old) { "La actividad cambió. Ya no se puede deshacer esta acción." }
             dao.updateOccurrence(old)
             if (old.status != Status.DONE) { dao.deleteStudyRecord(old.id); dao.deleteWorkoutRecord(old.id) }
         }
@@ -124,14 +126,18 @@ class CampusRepository(val db: CampusDatabase, private val onChanged: () -> Unit
 
     suspend fun editOccurrence(id: Long, value: Schedule) {
         require(value.title.isNotBlank() && value.durationMinutes in 1..1440 && value.startMinute in 0..1439) { "Revisa el nombre, la hora y la duración." }
+        require(value.reminderMinutes in com.campusflow.app.domain.ReminderOptions) { "Recordatorio inválido." }
         db.withTransaction {
             val old = requireNotNull(dao.occurrence(id))
+            require(old.status != Status.CANCELLED) { "Esta actividad fue eliminada." }
             val changedTime = old.day != value.startDay || old.minute != value.startMinute
             if (changedTime) {
                 require(old.status == Status.PENDING) { "No se puede cambiar la fecha de una actividad completada." }
                 require(CalendarRules.instant(value.startDay, value.startMinute) > System.currentTimeMillis()) { "Elige una fecha y hora futuras." }
                 dao.insertHistory(RescheduleHistory(occurrenceId = id, fromDay = old.day, fromMinute = old.minute, toDay = value.startDay, toMinute = value.startMinute, changedAt = System.currentTimeMillis()))
+                pauseTimerFor(id)
             }
+            if (value.category != Categories.STUDY) dao.clearTimerFor(id)
             // An inactive one-off holds this occurrence's overrides without generating another.
             val newId = dao.saveSchedule(value.copy(id = 0, title = value.title.trim(), repeat = Repeat.ONCE.name, active = false, endDay = null))
             dao.updateOccurrence(old.copy(scheduleId = newId, day = value.startDay, minute = value.startMinute, moved = old.moved || changedTime))
@@ -154,13 +160,17 @@ class CampusRepository(val db: CampusDatabase, private val onChanged: () -> Unit
             val next = old.copy(day = day, minute = minute, moved = true)
             dao.updateOccurrence(next)
             val historyId = dao.insertHistory(RescheduleHistory(occurrenceId = id, fromDay = old.day, fromMinute = old.minute, toDay = day, toMinute = minute, changedAt = System.currentTimeMillis()))
-            dao.timer()?.takeIf { it.occurrenceId == id }?.let { timer ->
-                dao.saveTimer(timer.copy(remainingMillis = com.campusflow.app.domain.TimerMath.remaining(timer.remainingMillis, timer.runningSince, System.currentTimeMillis()), runningSince = null))
-            }
+            pauseTimerFor(id)
             MoveReceipt(old, next, historyId)
         }
         onChanged()
         return receipt
+    }
+
+    private suspend fun pauseTimerFor(id: Long) {
+        dao.timer()?.takeIf { it.occurrenceId == id }?.let { timer ->
+            dao.saveTimer(timer.copy(remainingMillis = com.campusflow.app.domain.TimerMath.remaining(timer.remainingMillis, timer.runningSince, System.currentTimeMillis()), runningSince = null))
+        }
     }
 
     suspend fun undoMove(receipt: MoveReceipt) {

@@ -1,4 +1,85 @@
-# CampusFlow — registro de desarrollo
+# Kairos — registro de desarrollo
+
+## Fase 1 — estabilización completada
+
+Entrega limitada a estabilización. El nombre Kairos y el PNG con transparencia
+provienen del cambio de identidad ya solicitado. Las fases 2 y 3 siguen pendientes.
+
+### Cambios implementados
+
+| Archivos (bajo `app/src/main/java/com/campusflow/app/`) | Corrección |
+| --- | --- |
+| `data/CampusRepository.kt` | Generación de fechas transaccional; evita intercalado con edición de series/restauración. Pausa compartida del timer al mover desde editor o Posponer; descarta timer si deja de ser estudio. Rechaza edición de ocurrencias canceladas, recordatorios inválidos y series obsoletas. Deshacer comprueba también los datos para no pisar una edición. |
+| `domain/CalendarRules.kt` | Validación común de fechas, fecha final, repetición y todos los días semanales. También valida el inicio efectivo al versionar una serie. |
+| `data/CampusDao.kt`, `reminders/ReminderScheduler.kt` | Consulta individual de estado de alarma. Una restauración fallida no cancela las alarmas existentes. |
+| `data/DataBackup.kt` | Valida fechas de reglas/origen/historial, horas del historial, título y límites del timer. Verifica que el timer pertenezca a una sesión de estudio pendiente, con rollback completo si falla. |
+| `ui/AppViewModel.kt`, `ui/settings/SettingsScreen.kt` | Operaciones de datos y estado ocupado en ViewModel, con exclusión de solicitudes simultáneas; sobreviven a recreación de pantalla sin capturar su estado local. |
+| `ocr/ImportViewModel.kt` | Interpretación de texto fuera del hilo principal. |
+| `ocr/ScheduleInterpreter.kt` | Limpieza de títulos con acentos descompuestos sin desplazar índices; rechaza minutos malformados como `09:300`. |
+| `ui/settings/SettingsScreen.kt`, `NotificationControls.kt`, `ui/schedule/ScheduleScreen.kt` | Etiquetas para interruptores; fecha completa, presencia de actividades y selección expuestas a accesibilidad del horario. |
+
+Otros recursos: `AndroidManifest.xml` explicita `fullBackupContent=false`;
+`res/drawable-nodpi/kairos_logo.png` conserva el mismo PNG sin reescalado por
+densidad; eliminado `res/drawable/ic_launcher.xml`, ya sin referencias.
+
+**Base de datos:** esquema Room v2 sin cambios; no requiere migración nueva.
+La prueba de migración 1 → 2 sigue pasando. JSON v1 y marcador `CampusFlow`
+conservados; no se añadieron dependencias ni datos de ejemplo.
+
+### Revisión adicional
+
+- Se revisaron entidades, DAO, repositorios, ViewModels, navegación, pantallas,
+  temporizador, recordatorios, OCR, tests y documentación antes de modificar.
+- Series, excepciones e historial: pruebas de edición/movimiento/completado,
+  concurrencia y rechazo de editores obsoletos.
+- Fechas: cobertura JVM de cambio de zona, hueco y solapamiento de horario de
+  verano, cambio de año y fin de recurrencia. Se conserva la política de `java.time`.
+- Compose y cálculos: no se dividieron pantallas por tamaño ni se rediseñó Inicio;
+  se priorizó el estado de operaciones largas y la semántica de controles.
+- OCR/memoria: se revisaron muestreo de imágenes, cierre del reconocedor y scopes.
+  No se hizo perfilado de heap ni se afirma ausencia de todas las fugas. La revisión
+  manual antes de guardar sigue siendo obligatoria.
+- Los 16 avisos restantes de Lint son `GradleDependency`. Se mantienen las versiones
+  verificadas; no se actualizaron bibliotecas en bloque por avisos de disponibilidad.
+
+### Verificación de esta entrega
+
+Comando final:
+`./build.ps1 -Tasks @('assembleDebug','testDebugUnitTest','lintDebug','connectedDebugAndroidTest')`
+con `ANDROID_SERIAL=emulator-5554`.
+
+| Comprobación | Resultado |
+| --- | --- |
+| Build debug | Correcto |
+| Tests JVM | 19, 0 fallos |
+| Tests Android | 19, 0 fallos, 0 omitidos; emulador Android 15 / API 35 |
+| Lint | 0 errores; 16 avisos de versiones de dependencias |
+| Interfaz | Crear/recrear/completar/deshacer/posponer, rutina semanal y tema; semántica de interruptor y día seleccionado verificada |
+| Alarmas | Entrega Android real, intento de restore inválido, deduplicación, traslado y rechazo de trigger obsoleto |
+| Copias | Round-trip de historial; rollback ante relaciones, fechas y timers inválidos |
+
+Pruebas añadidas: 3 de calendario/zona, 2 de OCR y 5 de repositorio. Ampliadas
+la prueba de alarma y la de tema/navegación con regresiones de restore y accesibilidad.
+Archivos: `CalendarRulesTest.kt`, `InterpreterTest.kt`, `RepositoryTest.kt`,
+`ReminderIntegrationTest.kt`, `AppUiTest.kt`.
+
+Evidencia reproducible de esta ejecución:
+- `app/build/reports/tests/testDebugUnitTest/index.html`
+- `app/build/reports/androidTests/connected/debug/index.html`
+- `app/build/reports/lint-results-debug.html`
+- `app/build/test-results/testDebugUnitTest/`
+- `app/build/outputs/androidTest-results/connected/debug/`
+
+APK: `dist/Kairos-1.0.0-debug.apk` (idéntico al APK de `app/build/outputs/apk/debug/`).
+SHA-256: `00a0cd796d54b17ad021b1ab03888fdb42829d587362ccabc26eca911aaad09a`.
+
+Límites: en esta fase no se ejecutaron los scripts de reinicio/proceso terminado,
+ni pruebas en teléfono físico, ni una sesión manual de TalkBack. Los resultados de
+esos escenarios del desarrollo original, debajo, son históricos, no de esta entrega.
+
+---
+
+## Historial de la versión original CampusFlow
 
 ## Entorno
 - Windows; JDK 21 (Temurin) disponible.

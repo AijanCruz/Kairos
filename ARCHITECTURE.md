@@ -30,12 +30,18 @@ al repositorio y utilizan transacciones de Room.
   periódico y la apertura de la app extienden ese horizonte.
 - Navegar a otra semana también materializa sus fechas. Los cálculos resuelven
   los cambios de horario de verano con `java.time` y la zona local actual.
+- La lectura de reglas activas y la generación de ocurrencias comparten una
+  transacción, también al navegar semanas. Así una edición o restauración no
+  puede intercalarse entre la lectura de una regla y la creación de sus fechas.
 - Las cancelaciones conservan una marca para impedir que el generador vuelva
   a crear lo eliminado.
 - Editar una serie crea una nueva versión para las próximas ocurrencias pendientes;
   se mantienen las antiguas para el pasado y las excepciones. Editar una sola
   ocurrencia la enlaza a una configuración independiente, conserva su ID e historial
   y deja una cancelación en la serie para que no se duplique al regenerar.
+- Guardar una versión ya inactiva se rechaza como edición obsoleta. Deshacer
+  compara también los datos de la ocurrencia, no solo su estado, para no
+  sobrescribir una edición posterior. Las reglas se validan al guardar y restaurar.
 
 ## Recordatorios
 
@@ -49,6 +55,11 @@ Programación, entrega y sustitución de datos comparten un mutex. El registro d
 alarmas entregadas evita duplicar avisos al reconciliar. Las solicitudes de
 reprogramación se agrupan en un canal conflado para que una importación no lance
 un trabajo por cada clase. Las modificaciones de datos siempre son transaccionales.
+
+La sustitución cancela las alarmas anteriores únicamente después de que la
+transacción de restauración termine correctamente; una copia inválida deja
+los avisos existentes activos. La entrega consulta el estado de la ocurrencia
+por su clave primaria en vez de cargar todo el registro de recordatorios.
 
 Tras un reinicio se intenta reconciliar directamente desde el receptor asíncrono
 y se conserva WorkManager como recuperación persistente. Las alarmas ya registradas
@@ -66,6 +77,8 @@ el contador después de recrear la actividad/proceso. Al pausar se descuenta el
 tiempo transcurrido; al finalizar se crea un registro único por ocurrencia. La
 transacción evita una doble finalización. La finalización manual registra la
 duración planificada; con temporizador se registra el tiempo efectivamente usado.
+Reprogramar desde el editor pausa el contador igual que Posponer. Cambiar la
+categoría de la sesión a otra distinta de Estudio descarta su temporizador.
 
 El progreso de Inicio usa la fecha real de finalización para contar lo realizado
 esta semana, también cuando se completan pendientes de semanas anteriores.
@@ -80,6 +93,18 @@ El reconocedor entrega bloques con coordenadas a una interfaz de intérprete.
 La implementación inicial usa heurísticas para días, rangos horarios y líneas;
 la UI siempre permite corregir, quitar o agregar entradas antes de confirmar.
 No se considera el texto reconocido como instrucciones ejecutables.
+La interpretación se ejecuta en `Dispatchers.Default`; la actualización del
+estado permanece en el ViewModel. Los títulos se limpian sobre texto Unicode
+compuesto, evitando usar índices de una cadena normalizada de distinta longitud.
+
+## Copias y estado de operaciones
+
+Las operaciones exportar/restaurar/borrar y su estado ocupado pertenecen a
+`AppViewModel`; un guard impide iniciar otra operación mientras hay una activa,
+incluso tras recrear la pantalla. Room v2 y JSON v1 se conservan. La restauración
+valida fechas de reglas, ocurrencias e historial, además de los límites del timer
+y su asociación a una sesión de estudio pendiente. Una validación fallida revierte
+la transacción completa.
 
 ## Privacidad
 

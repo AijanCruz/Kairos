@@ -11,7 +11,7 @@ try {
     if ($Tasks -contains 'assembleDebug') {
         $dist = Join-Path $PSScriptRoot 'dist'
         New-Item -ItemType Directory -Force $dist | Out-Null
-        $apk = Join-Path $dist 'CampusFlow-1.0.0-debug.apk'
+        $apk = Join-Path $dist 'Kairos-1.0.0-debug.apk'
         Copy-Item "$PSScriptRoot\app\build\outputs\apk\debug\app-debug.apk" $apk -Force
         (Get-FileHash $apk -Algorithm SHA256).Hash.ToLowerInvariant() | Set-Content "$apk.sha256" -Encoding ASCII
         Write-Output "APK: $apk"

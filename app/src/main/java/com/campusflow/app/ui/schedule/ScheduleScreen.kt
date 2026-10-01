@@ -12,6 +12,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import com.campusflow.app.data.ActivityItem
 import com.campusflow.app.domain.*
 import com.campusflow.app.ui.components.*
@@ -44,11 +48,15 @@ fun ScheduleScreen(activities: List<ActivityItem>, onOpen: (ActivityItem) -> Uni
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     dates.forEach { date ->
                         val selected = date.toEpochDay() == selectedDay
-                        Surface(onClick = { selectedDay = date.toEpochDay() }, modifier = Modifier.weight(1f), shape = MaterialTheme.shapes.medium, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLow) {
-                            Column(Modifier.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val hasActivities = activities.any { it.occurrence.day == date.toEpochDay() }
+                        Surface(onClick = { selectedDay = date.toEpochDay() }, modifier = Modifier.weight(1f).semantics {
+                            this.selected = selected
+                            contentDescription = "${date.pretty()}${if (hasActivities) ", con actividades" else ", sin actividades"}"
+                        }, shape = MaterialTheme.shapes.medium, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLow) {
+                            Column(Modifier.clearAndSetSemantics { }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(date.dayOfWeek.getDisplayName(TextStyle.NARROW, Spanish).uppercase(), style = MaterialTheme.typography.labelSmall)
                                 Text(date.dayOfMonth.toString(), style = MaterialTheme.typography.titleMedium)
-                                Text(if (activities.any { it.occurrence.day == date.toEpochDay() }) "•" else "·")
+                                Text(if (hasActivities) "•" else "·")
                             }
                         }
                     }

@@ -1,5 +1,24 @@
 # Plan de verificación
 
+## Resultado actual — Kairos, fase 1
+
+Build y Lint correctos; 19 tests JVM y 19 tests Android pasan en emulador API 35.
+Lint: 0 errores y 16 avisos exclusivamente de versiones de dependencias.
+Detalle de cambios, comando de ejecución, APK y límites en `PROGRESS.md`.
+
+Regresiones incorporadas:
+- Generación concurrente con edición de una serie; rechazo del editor obsoleto.
+- Pausa del timer al editar horario y descarte al cambiar categoría.
+- Deshacer no sobrescribe una edición posterior.
+- Copias con fechas/timers inválidos conservan datos y temporizador existentes.
+- La alarma real sigue llegando después de rechazar una restauración inválida.
+- Hora local en dos zonas, hueco y solapamiento DST; reglas semanales inválidas.
+- OCR con acentos Unicode descompuestos y minutos malformados.
+- Semántica Compose de interruptor y día completo seleccionado.
+
+Los escenarios de reinicio/proceso terminado y tamaños especiales descritos
+más abajo pertenecen a verificaciones históricas; no se repitieron en esta fase.
+
 Cada fase requiere `assembleDebug` antes de avanzar. Las pruebas de lógica se
 ejecutan con `testDebugUnitTest`; Room y la integración Android se validan con
 `connectedDebugAndroidTest` cuando hay dispositivo o emulador disponible.
@@ -33,7 +52,7 @@ ejecutan con `testDebugUnitTest`; Room y la integración Android se validan con
 
 Los resultados reales se documentan al finalizar en `PROGRESS.md`.
 
-## Casos automatizados incluidos
+## Cobertura histórica de la base original (ampliada arriba)
 
 - 14 pruebas JVM: calendario, límites de recurrencia, DST, reconstrucción de
   temporizador, recuperación de alarmas tras reinicio e interpretación OCR en

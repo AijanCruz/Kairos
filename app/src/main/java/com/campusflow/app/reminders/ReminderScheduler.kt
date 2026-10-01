@@ -67,9 +67,11 @@ class ReminderScheduler(private val context: Context, private val db: CampusData
     }
 
     suspend fun replaceData(block: suspend () -> Unit) = mutex.withLock {
-        db.dao().reminderStates().forEach { alarmManager.cancel(pendingIntent(it.occurrenceId, it.triggerAt)) }
-        NotificationManagerCompat.from(context).cancelAll()
+        val previous = db.dao().reminderStates()
         block()
+        // Invalid restores roll back without cancelling the user's existing alarms.
+        previous.forEach { alarmManager.cancel(pendingIntent(it.occurrenceId, it.triggerAt)) }
+        NotificationManagerCompat.from(context).cancelAll()
     }
 
     suspend fun deliver(id: Long, trigger: Long, notify: (ActivityItem) -> Unit) = mutex.withLock {
@@ -80,7 +82,7 @@ class ReminderScheduler(private val context: Context, private val db: CampusData
         val now = System.currentTimeMillis()
         if (now < trigger - 1000 || now - trigger > 3 * 60 * 60_000L) return@withLock
         if (now > CalendarRules.instant(item.occurrence.day, item.occurrence.minute) + item.schedule.durationMinutes * 60_000L) return@withLock
-        val state = dao.reminderStates().find { it.occurrenceId == id } ?: return@withLock
+        val state = dao.reminderState(id) ?: return@withLock
         if (state.triggerAt != trigger || state.delivered) return@withLock
         createChannel()
         notify(item)

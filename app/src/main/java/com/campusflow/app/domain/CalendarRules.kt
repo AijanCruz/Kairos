@@ -6,6 +6,14 @@ import java.util.Locale
 
 enum class Repeat(val label: String) { ONCE("Una vez"), DAILY("Cada día"), WEEKLY("Cada semana") }
 object CalendarRules {
+    fun validateRule(start: Long, until: Long?, repeat: String, days: String) {
+        LocalDate.ofEpochDay(start)
+        until?.let { LocalDate.ofEpochDay(it) }
+        require(until == null || until >= start) { "La fecha final debe ser posterior al inicio." }
+        require(repeat in Repeat.entries.map { it.name }) { "Repetición inválida." }
+        require(repeat != Repeat.WEEKLY.name || days.split(',').all { it.toIntOrNull() in 1..7 }) { "Selecciona días válidos para la repetición semanal." }
+    }
+
     fun dates(start: Long, until: Long?, repeat: String, days: String, from: Long, to: Long): List<Long> {
         val first = maxOf(start, from)
         val last = minOf(until ?: to, to)

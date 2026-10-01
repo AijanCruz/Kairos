@@ -7,10 +7,11 @@
     <application
         android:name=".CampusApp"
         android:allowBackup="false"
+        android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         tools:targetApi="31"
-        android:label="CampusFlow"
-        android:icon="@drawable/ic_launcher"
+        android:label="Kairos"
+        android:icon="@drawable/kairos_logo"
         android:supportsRtl="true"
         android:theme="@style/Theme.CampusFlow">
         <activity android:name=".MainActivity" android:exported="true" android:windowSoftInputMode="adjustResize">

@@ -6,6 +6,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import androidx.room.withTransaction
+import com.campusflow.app.domain.CalendarRules
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -50,7 +51,7 @@ class DataBackup(private val db: CampusDatabase) {
     suspend fun restore(json: String) = withContext(Dispatchers.IO) {
         require(json.length <= 10_000_000) { "La copia supera el límite de 10 MB." }
         val root = JSONObject(json)
-        require(root.optString("format") == "CampusFlow" && root.optInt("version") == 1 && root.optInt("databaseVersion") == 2) { "Esta copia no es compatible con esta versión de CampusFlow." }
+        require(root.optString("format") == "CampusFlow" && root.optInt("version") == 1 && root.optInt("databaseVersion") == 2) { "Esta copia no es compatible con esta versión de Kairos." }
         val data = root.getJSONObject("data")
         require(tables.all { data.has(it) }) { "La copia está incompleta." }
         db.withTransaction {
@@ -73,15 +74,25 @@ class DataBackup(private val db: CampusDatabase) {
                         }
                         if (table == "schedules") {
                             require(getAsInteger("startMinute") in 0..1439 && getAsInteger("durationMinutes") in 1..1440) { "Horas inválidas en la copia." }
-                            require(getAsString("repeat") in listOf("ONCE", "DAILY", "WEEKLY")) { "Repetición inválida." }
+                            require(getAsString("title").isNotBlank()) { "Nombre de actividad inválido." }
+                            CalendarRules.validateRule(getAsLong("startDay"), getAsLong("endDay"), getAsString("repeat"), getAsString("weekdays"))
                             require(getAsInteger("reminderMinutes") in com.campusflow.app.domain.ReminderOptions) { "Recordatorio inválido." }
                         }
                         if (table == "occurrences") {
                             require(getAsInteger("minute") in 0..1439 && getAsInteger("originalMinute") in 0..1439) { "Hora inválida." }
                             require(getAsString("status") in listOf(Status.PENDING, Status.DONE, Status.CANCELLED)) { "Estado inválido." }
                             java.time.LocalDate.ofEpochDay(getAsLong("day"))
+                            java.time.LocalDate.ofEpochDay(getAsLong("originalDay"))
                         }
-                        if (table == "timers") putNull("runningSince")
+                        if (table == "reschedules") {
+                            java.time.LocalDate.ofEpochDay(getAsLong("fromDay"))
+                            java.time.LocalDate.ofEpochDay(getAsLong("toDay"))
+                            require(getAsInteger("fromMinute") in 0..1439 && getAsInteger("toMinute") in 0..1439) { "Hora inválida en el historial." }
+                        }
+                        if (table == "timers") {
+                            require(getAsInteger("id") == 1 && getAsLong("totalMillis") in 1..86_400_000L && getAsLong("remainingMillis") in 0..getAsLong("totalMillis")) { "Temporizador inválido." }
+                            putNull("runningSince")
+                        }
                         if (table == "reminder_states") put("scheduled", 0)
                     }
                 }
@@ -89,6 +100,9 @@ class DataBackup(private val db: CampusDatabase) {
             tables.asReversed().forEach { sql.execSQL("DELETE FROM $it") }
             tables.forEach { table -> prepared.getValue(table).forEach { sql.insert(table, SQLiteDatabase.CONFLICT_ABORT, it) } }
             sql.query("PRAGMA foreign_key_check").use { require(!it.moveToFirst()) { "La copia contiene relaciones inválidas." } }
+            sql.query("SELECT timers.id FROM timers JOIN occurrences ON occurrences.id = timers.occurrenceId JOIN schedules ON schedules.id = occurrences.scheduleId WHERE occurrences.status != 'PENDING' OR schedules.category != 'STUDY'").use {
+                require(!it.moveToFirst()) { "El temporizador no pertenece a una sesión de estudio pendiente." }
+            }
             db.dao().insertCategories(Categories.defaults)
         }
     }

@@ -5,13 +5,16 @@
 1. Copia `app/build/outputs/apk/debug/app-debug.apk` al teléfono y ábrelo.
 2. Autoriza a la aplicación desde la que abres el APK para instalarlo, si Android
    lo solicita. Es una compilación de prueba firmada con la clave de desarrollo.
-3. Abre CampusFlow. En el engranaje → Notificaciones, permite las notificaciones
+3. Abre Kairos. En el engranaje → Notificaciones, permite las notificaciones
    y habilita el acceso a alarmas exactas.
-4. En los ajustes de batería de Samsung, comprueba que CampusFlow no esté en
+4. En los ajustes de batería de Samsung, comprueba que Kairos no esté en
    «Aplicaciones en suspensión profunda».
 
 La aplicación empieza vacía: no mezcla tus datos con ejemplos ni estadísticas
 ficticias. La rutina Torso A de ejemplo se crea únicamente cuando pulsas su botón.
+
+APK actual: `dist/Kairos-1.0.0-debug.apk`. Kairos conserva la instalación y los
+datos de CampusFlow al actualizar con la misma firma; no hace falta desinstalar.
 
 ## Organizar el día
 
@@ -29,6 +32,9 @@ ficticias. La rutina Torso A de ejemplo se crea únicamente cuando pulsas su bot
 Editar una actividad concreta crea una excepción. Editar una serie cambia las
 próximas actividades pendientes sin alterar las completadas, anteriores o
 pospuestas. «Detener repetición» cancela las próximas pendientes de esa serie.
+Si una serie cambió mientras estaba abierto su editor, vuelve a abrirla antes de
+guardar. Deshacer se rechaza si una edición posterior cambió la actividad, para
+proteger esos cambios.
 
 ## Estudio
 
@@ -40,6 +46,8 @@ El contador conserva su estado al cambiar de pantalla o cerrar la app. Pausar
 detiene la cuenta; Finalizar registra el tiempo transcurrido y completa la sesión.
 Al llegar a cero se muestra el aviso en la pantalla de estudio; la finalización
 requiere confirmación. Los recordatorios de la actividad son independientes.
+Al cambiar la fecha u hora de una sesión desde el editor, su contador se pausa.
+Si cambias su categoría a otra distinta de Estudio, el temporizador se descarta.
 
 ## Entrenamiento
 
@@ -72,6 +80,10 @@ a nuevas actividades.
 materias, rutinas, ejercicios, sesiones, temporizador pausado e historial. No
 incluye la apariencia ni fotos. **Restaurar copia** reemplaza los datos actuales
 tras confirmar; una copia inválida no debe dejar una restauración parcial.
+La validación rechaza fechas, reglas o temporizadores inválidos conservando los
+datos y las alarmas actuales. Las copias válidas anteriores de CampusFlow siguen
+siendo compatibles. Durante exportar, restaurar o borrar, los botones de datos
+permanecen bloqueados aunque gires la pantalla o vuelvas a Configuración.
 
 ## Recordatorios y límites del sistema
 

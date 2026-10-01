@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CampusDao {
     @Query("SELECT * FROM reminder_states") suspend fun reminderStates(): List<ReminderState>
+    @Query("SELECT * FROM reminder_states WHERE occurrenceId = :id") suspend fun reminderState(id: Long): ReminderState?
     @Upsert suspend fun saveReminderState(value: ReminderState)
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertCategories(values: List<Category>)
     @Query("SELECT * FROM categories ORDER BY palette") fun categories(): Flow<List<Category>>

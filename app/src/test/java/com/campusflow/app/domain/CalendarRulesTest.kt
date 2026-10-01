@@ -24,4 +24,27 @@ class CalendarRulesTest {
         assertEquals(8, Instant.ofEpochMilli(instant).atZone(zone).hour)
         assertEquals(23 * 3600000L, instant - CalendarRules.instant(d - 1, 8 * 60, zone))
     }
+    @Test fun timezoneChangeKeepsWallClockAndChangesInstant() {
+        val day = LocalDate.of(2026, 10, 1).toEpochDay()
+        val madrid = ZoneId.of("Europe/Madrid")
+        val bogota = ZoneId.of("America/Bogota")
+        val first = CalendarRules.instant(day, 480, madrid)
+        val second = CalendarRules.instant(day, 480, bogota)
+        assertEquals(7 * 3_600_000L, second - first)
+        assertEquals(8, Instant.ofEpochMilli(second).atZone(bogota).hour)
+    }
+    @Test fun daylightSavingGapAndOverlapResolveDeterministically() {
+        val zone = ZoneId.of("Europe/Madrid")
+        val gap = CalendarRules.instant(LocalDate.of(2026, 3, 29).toEpochDay(), 150, zone)
+        assertEquals(LocalTime.of(3, 30), Instant.ofEpochMilli(gap).atZone(zone).toLocalTime())
+        val overlap = CalendarRules.instant(LocalDate.of(2026, 10, 25).toEpochDay(), 150, zone)
+        assertEquals(ZoneOffset.ofHours(2), Instant.ofEpochMilli(overlap).atZone(zone).offset)
+    }
+    @Test fun invalidRecurrenceRulesAreRejected() {
+        listOf("", "1,8", "1,x", "1,").forEach { days ->
+            try { CalendarRules.validateRule(100, null, "WEEKLY", days); fail("Must reject $days") } catch (_: IllegalArgumentException) { }
+        }
+        try { CalendarRules.validateRule(100, null, "UNKNOWN", ""); fail("Must reject unknown repeat") } catch (_: IllegalArgumentException) { }
+        try { CalendarRules.validateRule(100, 99, "DAILY", ""); fail("Must reject reversed range") } catch (_: IllegalArgumentException) { }
+    }
 }

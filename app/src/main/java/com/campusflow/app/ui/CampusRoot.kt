@@ -90,7 +90,7 @@ fun CampusRoot(vm: AppViewModel) {
                 if (route != "settings" && route != "import") FloatingActionButton(onClick = { addMenu = true }, containerColor = MaterialTheme.colorScheme.primaryContainer) { Icon(Icons.Outlined.Add, "Agregar") }
             },
             topBar = {
-                TopAppBar(title = { Text("campusflow", style = MaterialTheme.typography.titleLarge) }, actions = {
+                TopAppBar(title = { Text("Kairos", style = MaterialTheme.typography.titleLarge) }, actions = {
                     IconButton(onClick = { nav.navigate("settings") { launchSingleTop = true } }) { Icon(Icons.Outlined.Settings, "Configuración") }
                 })
             },

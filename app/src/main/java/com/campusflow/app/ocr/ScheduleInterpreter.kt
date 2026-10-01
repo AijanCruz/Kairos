@@ -22,7 +22,8 @@ interface ScheduleInterpreter { fun interpret(document: RecognizedDocument): Lis
 class HeuristicScheduleInterpreter : ScheduleInterpreter {
     private val dayNames = mapOf("lunes" to 1, "lun" to 1, "martes" to 2, "mar" to 2, "miercoles" to 3, "mie" to 3, "jueves" to 4, "jue" to 4, "viernes" to 5, "vie" to 5, "sabado" to 6, "sab" to 6, "domingo" to 7, "dom" to 7)
     private val dayRegex = Regex("\\b(lunes|lun|martes|mar|miercoles|mie|jueves|jue|viernes|vie|sabado|sab|domingo|dom)\\b")
-    private val range = Regex("(?<!\\d)(\\d{1,2})[:.](\\d{2})\\s*([ap]\\.?m\\.?)?\\s*(?:[-–—]|\\ba\\b)\\s*(\\d{1,2})[:.](\\d{2})\\s*([ap]\\.?m\\.?)?", RegexOption.IGNORE_CASE)
+    private val range = Regex("(?<!\\d)(\\d{1,2})[:.](\\d{2})\\s*([ap]\\.?m\\.?)?\\s*(?:[-–—]|\\ba\\b)\\s*(\\d{1,2})[:.](\\d{2})(?!\\d)\\s*([ap]\\.?m\\.?)?", RegexOption.IGNORE_CASE)
+    private val titleDays = Regex("\\b(lunes|lun|martes|mar|mi[eé]rcoles|mi[eé]|jueves|jue|viernes|vie|s[aá]bado|s[aá]b|domingo|dom)\\b", RegexOption.IGNORE_CASE)
     private fun normalized(value: String) = Normalizer.normalize(value.lowercase(), Normalizer.Form.NFD).replace(Regex("\\p{M}"), "")
     private fun day(value: String): Int? = dayRegex.find(normalized(value))?.value?.let(dayNames::get)
     private fun onlyDay(value: String) = dayRegex.replace(normalized(value), "").trim(' ', '.', ':', '|').isEmpty()
@@ -45,9 +46,9 @@ class HeuristicScheduleInterpreter : ScheduleInterpreter {
         return if (end > start) start to end else null
     }
     private fun title(text: String): String {
-        var cleaned = range.replace(text, "")
-        val matches = dayRegex.findAll(normalized(cleaned)).toList().asReversed()
-        matches.forEach { cleaned = cleaned.removeRange(it.range) }
+        // Match on the original (composed) text: normalized indices can shift
+        // when OCR produces decomposed accents or combining marks.
+        val cleaned = titleDays.replace(range.replace(Normalizer.normalize(text, Normalizer.Form.NFC), ""), "")
         return cleaned.trim(' ', '|', '-', '–', ':', ',', ';')
     }
     private fun isSubject(text: String): Boolean {

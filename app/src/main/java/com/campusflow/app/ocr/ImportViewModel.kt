@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class ImportViewModel(application: Application, private val saved: SavedStateHandle) : AndroidViewModel(application) {
     private val app = application as CampusApp
@@ -30,7 +32,7 @@ class ImportViewModel(application: Application, private val saved: SavedStateHan
                 try { app.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: SecurityException) { }
                 val document = OnDeviceOcr(app).recognize(uri)
                 saved["text"] = document.text.take(40_000)
-                update(interpreter.interpret(document))
+                update(withContext(Dispatchers.Default) { interpreter.interpret(document) })
                 if (document.text.isBlank()) error.value = "No se detectó texto. Prueba una imagen más nítida o agrega las materias manualmente."
                 else if (candidates.value.isEmpty()) error.value = "No se detectaron clases claras. Puedes agregarlas usando el texto reconocido."
             } catch (cancel: CancellationException) { throw cancel }

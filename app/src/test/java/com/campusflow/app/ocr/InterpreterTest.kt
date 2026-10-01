@@ -26,6 +26,16 @@ class InterpreterTest {
         assertNull(result.weekday)
         assertTrue(result.uncertain)
     }
+    @Test fun decomposedAccentsDoNotShiftSubjectName() {
+        val result = parser.interpret(RecognizedDocument("Fi\u0301sica mie\u0301rcoles 08:00 - 09:00", emptyList())).single()
+        assertEquals("Física", result.title)
+        assertEquals(3, result.weekday)
+        assertEquals(480, result.startMinute)
+    }
+    @Test fun malformedMinutesAreNotPartiallyAccepted() {
+        assertNull(parser.times("08:00 - 09:300"))
+        assertNull(parser.times("08:60 - 09:30"))
+    }
     @Test fun usesColumnGeometry() {
         val lines = listOf(TextRegion("Lunes",100,0,200,20), TextRegion("Martes",300,0,400,20), TextRegion("08:00 - 09:30",0,60,80,80), TextRegion("Cálculo",100,60,200,80), TextRegion("Física",300,60,400,80))
         val result = parser.interpret(RecognizedDocument("", lines))
