@@ -1,4 +1,4 @@
-# Kairos (antes CampusFlow)
+# CampusFlow
 
 Organizador Android local de universidad, estudio y entrenamiento. Kotlin,
 Jetpack Compose, Material 3, Room, ViewModel, Flow y Navigation Compose.
@@ -32,7 +32,7 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1 -Tasks testDebugUnitTest
 
 APK de desarrollo: `app/build/outputs/apk/debug/app-debug.apk`.
 `build.ps1` deja también una copia lista para transferir en
-`dist/Kairos-1.0.0-debug.apk` y su huella SHA-256.
+`dist/CampusFlow-1.0.0-debug.apk` y su huella SHA-256.
 
 Es un APK universal de prueba firmado con la clave de desarrollo, compatible con
 ARM64 (Galaxy A55), ARMv7 y emuladores x86/x86_64. No necesita conexión para
@@ -58,13 +58,6 @@ El wrapper de Gradle permite ejecutar `./gradlew assembleDebug`.
 ## Estado de verificación
 
 Consultar `PROGRESS.md` para las compilaciones, pruebas y limitaciones observadas.
-
-La fase 1 de estabilización está completada: 19 tests JVM y 19 tests Android
-correctos en emulador API 35; Lint sin errores y con 16 avisos de actualización
-de dependencias. Detalle de correcciones en `PROGRESS.md`.
-Se conserva `com.campusflow.app`, Room v2 y el formato JSON anterior para actualizar
-la instalación existente y restaurar copias válidas de CampusFlow. Las fases 2 y 3
-no forman parte de esta entrega.
 
 ```powershell
 # Desde PowerShell, dentro de esta carpeta:
