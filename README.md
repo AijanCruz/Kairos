@@ -1,4 +1,4 @@
-# CampusFlow
+# Kairos
 
 Organizador Android local de universidad, estudio y entrenamiento. Kotlin,
 Jetpack Compose, Material 3, Room, ViewModel, Flow y Navigation Compose.
