@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.Lifecycle
 import androidx.core.app.NotificationManagerCompat
+import com.campusflow.app.ui.academic.AcademicScreen
 
 private data class Destination(val route: String, val label: String, val icon: ImageVector)
 private val destinations = listOf(
@@ -54,6 +55,7 @@ fun CampusRoot(vm: AppViewModel) {
     val activities by vm.activities.collectAsStateWithLifecycle()
     val categories by vm.categories.collectAsStateWithLifecycle()
     val subjects by vm.subjects.collectAsStateWithLifecycle()
+    val evaluations by vm.evaluations.collectAsStateWithLifecycle()
     val routines by vm.routines.collectAsStateWithLifecycle()
     val saving by vm.saving.collectAsStateWithLifecycle()
     val saveError by vm.saveError.collectAsStateWithLifecycle()
@@ -87,7 +89,7 @@ fun CampusRoot(vm: AppViewModel) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbar) },
             floatingActionButton = {
-                if (route != "settings" && route != "import") FloatingActionButton(onClick = { addMenu = true }, containerColor = MaterialTheme.colorScheme.primaryContainer) { Icon(Icons.Outlined.Add, "Agregar") }
+                if (route != "settings" && route != "import" && !route.startsWith("academics/")) FloatingActionButton(onClick = { addMenu = true }, containerColor = MaterialTheme.colorScheme.primaryContainer) { Icon(Icons.Outlined.Add, "Agregar") }
             },
             topBar = {
                 TopAppBar(title = { Text("Kairos", style = MaterialTheme.typography.titleLarge) }, actions = {
@@ -97,10 +99,13 @@ fun CampusRoot(vm: AppViewModel) {
             bottomBar = {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     destinations.forEach { destination ->
-                        NavigationBarItem(selected = route == destination.route, onClick = {
+                        NavigationBarItem(selected = route == destination.route || (destination.route == "study" && route.startsWith("academics/")), onClick = {
                             nav.navigate(destination.route) {
                                 popUpTo(nav.graph.startDestinationId) { saveState = true }
-                                launchSingleTop = true; restoreState = true
+                                launchSingleTop = true
+                                // Inicio must return to its overview, not restore an
+                                // evaluation opened from that same tab.
+                                restoreState = destination.route != "home"
                             }
                         }, icon = { Icon(destination.icon, destination.label) }, label = { Text(destination.label) })
                     }
@@ -112,8 +117,11 @@ fun CampusRoot(vm: AppViewModel) {
                 destinations.forEach { destination ->
                     composable(destination.route) {
                         if (destination.route == "schedule") ScheduleScreen(activities, { detailId = it.occurrence.id }, vm::complete) { from, to -> vm.perform { vm.repository.generateRange(from, to) } }
-                        else if (destination.route == "home") DashboardScreen(activities, now, remindersReady && preferences.notifications, { detailId = it.occurrence.id }, vm::complete, { addMenu = true }, { nav.navigate("settings") })
-                        else if (destination.route == "study") StudyScreen(vm, activities, subjects, { detailId = it.occurrence.id }, { initial = null; editOccurrenceId = null; newCategory = Categories.STUDY; editor = true })
+                        else if (destination.route == "home") DashboardScreen(activities, now, remindersReady && preferences.notifications, { detailId = it.occurrence.id }, vm::complete, { addMenu = true }, { nav.navigate("settings") }, evaluations, { nav.navigate("academics/${it.evaluation.subjectId}/${it.evaluation.id}") })
+                        else if (destination.route == "study") StudyScreen(vm, activities, subjects, { detailId = it.occurrence.id }, { subjectId, minutes ->
+                            initial = Schedule(title = "", category = Categories.STUDY, startDay = java.time.LocalDate.now().toEpochDay(), startMinute = 16 * 60, durationMinutes = minutes, subjectId = subjectId, reminderMinutes = preferences.reminderMinutes)
+                            editOccurrenceId = null; newCategory = Categories.STUDY; editor = true
+                        }, { nav.navigate("academics/${it.id}/0") })
                         else if (destination.route == "workout") WorkoutScreen(vm, activities, routines, { detailId = it.occurrence.id }) { routine ->
                             val today = java.time.LocalDate.now()
                             editOccurrenceId = null
@@ -125,6 +133,9 @@ fun CampusRoot(vm: AppViewModel) {
                             EmptyState("Un espacio para organizarte", "Tus actividades aparecerán aquí.", destination.icon)
                         }
                     }
+                }
+                composable("academics/{subjectId}/{evaluationId}") { academicEntry ->
+                    AcademicScreen(vm, academicEntry.arguments?.getString("subjectId")?.toLongOrNull() ?: 0, academicEntry.arguments?.getString("evaluationId")?.toLongOrNull() ?: 0) { nav.popBackStack() }
                 }
                 composable("settings") {
                     SettingsScreen(vm, preferences) { nav.popBackStack() }

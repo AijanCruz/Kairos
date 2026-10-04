@@ -49,6 +49,38 @@ requiere confirmación. Los recordatorios de la actividad son independientes.
 Al cambiar la fecha u hora de una sesión desde el editor, su contador se pausa.
 Si cambias su categoría a otra distinta de Estudio, el temporizador se descarta.
 
+### Evaluaciones y temas
+
+En **Estudio → Evaluaciones de [materia] → + Evaluación** puedes crear un examen,
+tarea, proyecto, quiz o exposición con título y fecha límite. Toca la evaluación
+para editarla, completarla, volverla a marcar pendiente o eliminarla.
+
+En los exámenes aparece **+ Tema**. Cada tema tiene un nombre editable y uno de
+estos estados: **Pendiente**, **Practicando** o **Dominado**. Para cambiar un examen
+con temas a otro tipo, primero elimina sus temas; no se descartan automáticamente.
+
+El punto de color indica cercanía: verde a más de 14 días, amarillo de 8 a 14 días
+y rojo a 7 días o menos (incluidas fechas vencidas). Un examen con al menos un tema
+y todos dominados muestra **Preparado**, aunque esté cerca. Preparado no significa
+completado: completar la evaluación es una acción separada.
+
+Inicio muestra como máximo tres **Próximas evaluaciones**, ordenadas por fecha,
+no completadas y desde hoy en adelante. Las vencidas y completadas se consultan
+en la materia. Tocar una de Inicio abre su gestión con los temas desplegados.
+
+### Sugerencia y duración de estudio
+
+Selecciona **Materia para estudiar**. Del examen más cercano no completado y con
+fecha desde hoy, se sugiere primero un tema Pendiente y luego uno Practicando.
+Los Dominados se ignoran. Si ese examen no tiene temas por preparar, no hay
+sugerencia. Cambiar la materia o ver una sugerencia no crea una sesión.
+
+En **Duración de la nueva sesión** está disponible **40 minutos**. Pulsa
+**Planificar estudio**, revisa el nombre y horario y guarda cuando lo decidas;
+se preseleccionan la materia y la duración elegidas. El temporizador existente
+usa la duración de esa sesión. También puedes elegir 40 minutos como valor
+predeterminado desde Configuración.
+
 ## Entrenamiento
 
 En Entreno → + Rutina puedes agregar ejercicios con series, repeticiones,
@@ -84,6 +116,11 @@ La validación rechaza fechas, reglas o temporizadores inválidos conservando lo
 datos y las alarmas actuales. Las copias válidas anteriores de CampusFlow siguen
 siendo compatibles. Durante exportar, restaurar o borrar, los botones de datos
 permanecen bloqueados aunque gires la pantalla o vuelvas a Configuración.
+
+**Límite de la capa académica:** el backup no se amplió en esta entrega. Sus JSON
+no incluyen evaluaciones ni temas. Una restauración reemplaza las materias y,
+por esa relación, elimina las evaluaciones y temas actuales; el archivo no puede
+recuperarlos. Eliminar una materia también elimina sus evaluaciones y temas.
 
 ## Recordatorios y límites del sistema
 

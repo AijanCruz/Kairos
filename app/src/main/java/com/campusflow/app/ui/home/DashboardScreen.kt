@@ -17,15 +17,17 @@ import com.campusflow.app.data.*
 import com.campusflow.app.domain.*
 import com.campusflow.app.ui.components.*
 import java.time.LocalDateTime
+import com.campusflow.app.ui.academic.EvaluationRow
 
 @Composable
-fun DashboardScreen(activities: List<ActivityItem>, now: LocalDateTime, remindersReady: Boolean, onOpen: (ActivityItem) -> Unit, onComplete: (ActivityItem) -> Unit, onAdd: () -> Unit, onReminders: () -> Unit) {
+fun DashboardScreen(activities: List<ActivityItem>, now: LocalDateTime, remindersReady: Boolean, onOpen: (ActivityItem) -> Unit, onComplete: (ActivityItem) -> Unit, onAdd: () -> Unit, onReminders: () -> Unit, evaluations: List<EvaluationWithTopics>, onEvaluation: (EvaluationWithTopics) -> Unit) {
     val today = now.toLocalDate()
     val daily = activities.filter { it.occurrence.day == today.toEpochDay() }
     val pending = daily.filter { it.occurrence.status == Status.PENDING }
     val overdue = activities.filter { it.occurrence.day < today.toEpochDay() && it.occurrence.status == Status.PENDING }
     val weekStart = CalendarRules.weekStart(today).toEpochDay()
     val weekly = activities.filter { it.occurrence.day in weekStart..weekStart + 6 }
+    val upcoming = remember(evaluations, today) { AcademicRules.upcoming(evaluations, today.toEpochDay()).take(3) }
     var showOverdue by rememberSaveable { mutableStateOf(false) }
     val greeting = when (now.hour) { in 5..11 -> "Buenos días"; in 12..19 -> "Buenas tardes"; else -> "Buenas noches" }
     LazyColumn(contentPadding = PaddingValues(20.dp, 12.dp, 20.dp, 100.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -38,6 +40,19 @@ fun DashboardScreen(activities: List<ActivityItem>, now: LocalDateTime, reminder
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(if (pending.isEmpty()) "Todo listo por hoy 🎉" else "${pending.size} ${if (pending.size == 1) "actividad pendiente" else "actividades pendientes"}", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                         IconButton(onClick = onAdd) { Icon(Icons.Outlined.ArrowOutward, "Planificar actividad") }
+                    }
+                }
+            }
+        }
+        if (upcoming.isNotEmpty()) item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Próximas evaluaciones", style = MaterialTheme.typography.titleMedium)
+                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
+                    Column {
+                        upcoming.forEachIndexed { index, item ->
+                            if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                            EvaluationRow(item, today.toEpochDay()) { onEvaluation(item) }
+                        }
                     }
                 }
             }

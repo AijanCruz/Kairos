@@ -20,6 +20,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val preferences = container.preferences.flow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserPreferences())
     val repository = container.repository
     val study = StudyRepository(repository)
+    val academic = AcademicRepository(container.database)
+    val evaluations = academic.evaluations.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val academicSaving = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val academicError = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val workout = WorkoutRepository(repository)
     val timer = study.timer.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     val studyRecords = study.records.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -46,6 +50,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     suspend fun message(text: String, undo: (suspend () -> Unit)? = null) { messages.send(Feedback(text, undo)) }
+    fun changeAcademic(block: suspend () -> Unit, onSaved: () -> Unit = {}) {
+        if (!academicSaving.compareAndSet(false, true)) return
+        academicError.value = null
+        viewModelScope.launch {
+            try { block(); onSaved() }
+            catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (error: Exception) { academicError.value = error.message ?: "No se pudo guardar el cambio." }
+            finally { academicSaving.value = false }
+        }
+    }
     private fun dataOperation(block: suspend () -> Unit) {
         if (!_dataBusy.compareAndSet(false, true)) return
         perform { try { block() } finally { _dataBusy.value = false } }

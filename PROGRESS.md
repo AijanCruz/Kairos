@@ -1,5 +1,80 @@
 # Kairos — registro de desarrollo
 
+## Capa académica sencilla — entrega completada
+
+Implementada según el nuevo alcance limitado del usuario; no se rediseñó Inicio
+ni se continuó el plan anterior de Dashboard 2.0. Revisión restringida a Room,
+materias, Inicio, Estudio, navegación, tema/componentes y la interacción directa
+de las nuevas relaciones con el backup existente.
+
+### Agregado
+
+- Evaluaciones por materia: EXAMEN, TAREA, PROYECTO, QUIZ y EXPOSICION; título,
+  fecha límite y completado. Crear, editar, eliminar, completar y reabrir.
+- Temas solo para EXAMEN, con nombre y estado PENDIENTE/PRACTICANDO/DOMINADO.
+- Semáforo calculado: >14 días verde, 8–14 amarillo, <=7 rojo. Preparado cuando
+  todos los temas están dominados y hay al menos uno; no completa automáticamente.
+- Sección compacta en Inicio con hasta tres evaluaciones no completadas desde hoy,
+  fecha más cercana primero. Vencidas/completadas permanecen accesibles en la materia.
+- Sugerencia al seleccionar materia: examen más cercano no completado desde hoy,
+  tema Pendiente antes de Practicando. Si ese examen está preparado o no tiene
+  temas, no hay sugerencia. No crea sesiones automáticamente.
+- Preset de 40 minutos en Estudio y preferencias. La materia y duración pasan
+  al editor de sesión existente; el usuario confirma antes de guardar.
+- Corregida la restauración de navegación al pulsar Inicio desde una evaluación:
+  vuelve al resumen en vez de restaurar otra vez la pantalla de evaluación.
+
+### Archivos
+
+Nuevos bajo `app/src/main/java/com/campusflow/app/`:
+`data/AcademicEntities.kt`, `data/AcademicDao.kt`, `data/AcademicRepository.kt`,
+`domain/AcademicRules.kt`, `ui/academic/AcademicScreen.kt`,
+`ui/academic/EvaluationEditor.kt`, `ui/academic/EvaluationRow.kt`.
+
+Modificados: `data/CampusDatabase.kt`, `ui/AppViewModel.kt`, `ui/CampusRoot.kt`,
+`ui/home/DashboardScreen.kt`, `ui/study/StudyScreen.kt`,
+`ui/settings/SettingsScreen.kt`. Esquema nuevo:
+`app/schemas/com.campusflow.app.data.CampusDatabase/3.json`.
+Tests: `AcademicRulesTest.kt`, `AcademicRepositoryTest.kt`, `AcademicUiTest.kt`
+y `MigrationTest.kt`. Documentación: README, arquitectura, guía y este registro.
+
+### Migración y verificación
+
+- Room 2 → 3: crea `academic_evaluations`, `exam_topics` y sus índices/claves
+  foráneas; no altera las entidades/tablas anteriores. Comparación de esquemas
+  confirma únicamente esas adiciones. Se probó también la ruta 1 → 2 → 3.
+- `testDebugUnitTest --tests com.campusflow.app.domain.AcademicRulesTest`:
+  **8 tests aprobados**, incluyendo límites 7/8/14/15 días, cambio de año,
+  preparación con/sin temas, prioridades y exclusión de completados/vencidos.
+- Android API 35: **21 tests de datos/migración aprobados** (5 académicos, 3 de
+  migración y 13 regresiones del repositorio existente sobre Room v3).
+- **2 tests Compose académicos aprobados** tras corregir un selector ambiguo del
+  test y el retorno a Inicio. Cubren borrador tras recreación, creación de examen
+  y tema, cambios de estado, Preparado, completar desde Inicio, sugerencia sin
+  escritura automática y sesión de 40 minutos con el temporizador existente.
+- `assembleDebug` y `lintDebug` correctos. Lint: **0 errores**, 16 avisos de
+  versiones de dependencias ya existentes. No se añadieron dependencias.
+
+Los tests Android se ejecutaron seleccionando `AcademicRepositoryTest`,
+`MigrationTest`, `RepositoryTest`, `AcademicUiTest`; la reejecución final de UI
+seleccionó `AcademicUiTest`. No se ejecutó una auditoría completa de la app.
+
+APK: `dist/Kairos-1.0.0-debug.apk`.
+SHA-256: `3ab069f8b249051522ceade36b4f42472fe2ee64fe13a5eae9a78bfca83f32cf`.
+
+### Limitaciones pendientes
+
+El usuario excluyó cambios de Backup: su código/formato no se modificó y las
+nuevas evaluaciones/temas **no se exportan**. Restaurar un JSON reemplaza materias
+y elimina sus evaluaciones/temas por CASCADE, sin poder recuperarlos desde ese
+archivo. La migración de actualización, en cambio, conserva todos los datos
+preexistentes. Se documentó la limitación en la guía de uso.
+
+Pruebas realizadas en emulador, no en teléfono físico. El semáforo tiene etiquetas
+de accesibilidad y el preparado se expresa también con texto, no solo color.
+
+---
+
 ## Fase 1 — estabilización completada
 
 Entrega limitada a estabilización. El nombre Kairos y el PNG con transparencia

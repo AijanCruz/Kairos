@@ -11,6 +11,8 @@ Jetpack Compose, Material 3, Room, ViewModel, Flow y Navigation Compose.
 - Completar, eliminar y posponer con deshacer; historial y origen conservados.
 - Edición individual y de próximas ocurrencias de una serie sin cambiar el pasado.
 - Materias, sesiones de estudio y temporizador persistente (iniciar/pausar/finalizar).
+- Evaluaciones por materia, temas de examen con estados, semáforo de cercanía,
+  próximas evaluaciones en Inicio y sugerencia de estudio; preset de 40 minutos.
 - Rutinas y ejercicios editables con series, repeticiones, descanso, peso y notas;
   asignación semanal y registro de entrenamientos completados.
 - Notificaciones reales con AlarmManager, mantenimiento con WorkManager,
@@ -77,11 +79,16 @@ en `Pictures/CampusFlowVerification` del emulador.
 - `data/Entities.kt`, `CampusDao.kt`: modelo y consultas Room.
 - `data/CampusRepository.kt`: recurrencias, excepciones, completar y traslados.
 - `data/StudyRepository.kt`, `WorkoutRepository.kt`: estudio y rutinas.
+- `data/AcademicEntities.kt`, `AcademicDao.kt`, `AcademicRepository.kt`: evaluaciones y temas.
+- `domain/AcademicRules.kt`, `ui/academic/`: semáforo, sugerencias y gestión por materia.
 - `domain/`: cálculo de fechas y temporizador, probado sin Android.
 - `ui/`: pantallas Compose, componentes reutilizables y estado de ViewModel.
 - `reminders/`: alarmas, notificaciones y trabajo persistente.
 - `ocr/`: reconocimiento on-device e intérprete sustituible.
-- `app/schemas/`: versiones exportadas de Room y migración 1 → 2.
+- `app/schemas/`: versiones exportadas de Room y migraciones 1 → 2 → 3.
+
+La capa académica usa Room v3 sin alterar las tablas existentes. El backup actual
+no incluye evaluaciones ni temas; ver el alcance y las limitaciones en `USER_GUIDE.md`.
 
 La distribución de producción necesita una clave de firma privada propia; este
 proyecto entrega la variante de desarrollo para instalación y pruebas personales.

@@ -53,7 +53,7 @@ fun SettingsScreen(vm: AppViewModel, preferences: UserPreferences, onBack: () ->
         item {
             SettingsCard {
                 ChoiceField("Recordatorio predeterminado", preferences.reminderMinutes, ReminderOptions, ::reminderLabel) { vm.perform { vm.container.preferences.setReminder(it) } }
-                ChoiceField("Duración de estudio", preferences.studyMinutes, listOf(15, 20, 25, 30, 45, 60, 90, 120), { "$it minutos" }) { vm.perform { vm.container.preferences.setStudy(it) } }
+                ChoiceField("Duración de estudio", preferences.studyMinutes, listOf(15, 20, 25, 30, 40, 45, 60, 90, 120), { "$it minutos" }) { vm.perform { vm.container.preferences.setStudy(it) } }
                 Text("Se aplican a nuevas actividades. Cada actividad puede tener su propia configuración.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

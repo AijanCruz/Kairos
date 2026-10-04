@@ -21,14 +21,21 @@ import kotlinx.coroutines.delay
 import java.time.LocalDate
 
 @Composable
-fun StudyScreen(vm: AppViewModel, activities: List<ActivityItem>, subjects: List<Subject>, onOpen: (ActivityItem) -> Unit, onAdd: () -> Unit) {
+fun StudyScreen(vm: AppViewModel, activities: List<ActivityItem>, subjects: List<Subject>, onOpen: (ActivityItem) -> Unit, onAdd: (Long?, Int) -> Unit, onEvaluations: (Subject) -> Unit) {
     val timer by vm.timer.collectAsStateWithLifecycle()
     val records by vm.studyRecords.collectAsStateWithLifecycle()
+    val evaluations by vm.evaluations.collectAsStateWithLifecycle()
+    val preferences by vm.preferences.collectAsStateWithLifecycle()
+    val now by vm.now.collectAsStateWithLifecycle()
+    var selectedSubjectId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var selectedMinutes by rememberSaveable { mutableStateOf<Int?>(null) }
     var subjectDialog by rememberSaveable { mutableStateOf(false) }
     var subjectId by rememberSaveable { mutableStateOf<Long?>(null) }
     var subjectName by rememberSaveable { mutableStateOf("") }
     var deleteSubject by remember { mutableStateOf<Subject?>(null) }
-    val today = LocalDate.now().toEpochDay()
+    val today = now.toLocalDate().toEpochDay()
+    val selectedSubject = subjects.find { it.id == selectedSubjectId }
+    val suggestion = remember(evaluations, selectedSubject?.id, today) { AcademicRules.suggestion(evaluations, selectedSubject?.id, today) }
     val sessions = activities.filter { it.schedule.category == Categories.STUDY && it.occurrence.status == Status.PENDING && it.occurrence.day <= today + 14 }
     LazyColumn(contentPadding = PaddingValues(20.dp, 12.dp, 20.dp, 100.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { PageHeading("Modo enfoque", "Aprende un poco. Avanza mucho.") }
@@ -51,16 +58,30 @@ fun StudyScreen(vm: AppViewModel, activities: List<ActivityItem>, subjects: List
         if (subjects.isEmpty()) item { Text("Agrega tus materias y asócialas a tus clases o sesiones.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(subjects, key = { "subject-${it.id}" }) { subject ->
             Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest, shape = MaterialTheme.shapes.medium) {
-                Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(subject.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                    IconButton(onClick = { subjectId = subject.id; subjectName = subject.name; subjectDialog = true }) { Icon(Icons.Outlined.Edit, "Editar materia") }
-                    IconButton(onClick = { deleteSubject = subject }) { Icon(Icons.Outlined.DeleteOutline, "Eliminar materia") }
+                Column {
+                    Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(subject.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                        IconButton(onClick = { subjectId = subject.id; subjectName = subject.name; subjectDialog = true }) { Icon(Icons.Outlined.Edit, "Editar materia") }
+                        IconButton(onClick = { deleteSubject = subject }) { Icon(Icons.Outlined.DeleteOutline, "Eliminar materia") }
+                    }
+                    TextButton(onClick = { onEvaluations(subject) }, modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)) { Text("Evaluaciones de ${subject.name}") }
                 }
+            }
+        }
+        if (subjects.isNotEmpty()) item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                ChoiceField("Materia para estudiar", selectedSubject?.id, listOf(null) + subjects.map { it.id }, { id -> subjects.find { it.id == id }?.name ?: "Sin seleccionar" }) { selectedSubjectId = it }
+                suggestion?.let { Text("Sugerencia: practicar ${it.name}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary) }
             }
         }
         item { SectionLabel("SESIONES PENDIENTES", "Próximos 14 días") }
         if (sessions.isEmpty()) item { EmptyState("Un momento para aprender", "Programa una sesión breve. La constancia hace la diferencia.") }
-        item { OutlinedButton(onClick = onAdd, modifier = Modifier.fillMaxWidth()) { Text("Planificar estudio") } }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ChoiceField("Duración de la nueva sesión", selectedMinutes ?: preferences.studyMinutes, listOf(15, 20, 25, 30, 40, 45, 60, 90, 120), { "$it minutos" }) { selectedMinutes = it }
+                OutlinedButton(onClick = { onAdd(selectedSubject?.id, selectedMinutes ?: preferences.studyMinutes) }, modifier = Modifier.fillMaxWidth()) { Text("Planificar estudio") }
+            }
+        }
         items(sessions, key = { it.occurrence.id }) { item ->
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(item.occurrence.day.asDate().pretty(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -88,7 +109,7 @@ fun StudyScreen(vm: AppViewModel, activities: List<ActivityItem>, subjects: List
             }
         }) { Text("Guardar") }
     }, dismissButton = { TextButton(onClick = { subjectDialog = false }) { Text("Cancelar") } })
-    deleteSubject?.let { subject -> AlertDialog(onDismissRequest = { deleteSubject = null }, title = { Text("¿Eliminar ${subject.name}?") }, text = { Text("Tus actividades se conservarán sin la asociación a esta materia.") }, confirmButton = {
+    deleteSubject?.let { subject -> AlertDialog(onDismissRequest = { deleteSubject = null }, title = { Text("¿Eliminar ${subject.name}?") }, text = { Text("Tus actividades se conservarán sin la asociación a esta materia. Sus evaluaciones y temas se eliminarán.") }, confirmButton = {
         TextButton(onClick = { vm.perform { vm.repository.dao.deleteSubject(subject) }; deleteSubject = null }) { Text("Eliminar") }
     }, dismissButton = { TextButton(onClick = { deleteSubject = null }) { Text("Cancelar") } }) }
 }

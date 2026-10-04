@@ -83,6 +83,24 @@ categoría de la sesión a otra distinta de Estudio descarta su temporizador.
 El progreso de Inicio usa la fecha real de finalización para contar lo realizado
 esta semana, también cuando se completan pendientes de semanas anteriores.
 
+## Capa académica
+
+Room v3 añade solo `academic_evaluations` (id, subjectId, title, type, date,
+completed) y `exam_topics` (id, evaluationId, name, status). Las fechas son días
+de calendario (`epochDay`), no instantes ni horarios. Las tablas anteriores no
+cambian. Migración 2 → 3 aditiva, conservando la ruta 1 → 2 → 3.
+
+Un DAO y repositorio pequeños exponen evaluaciones con materia y temas como Flow.
+`AppViewModel` comparte ese estado y serializa las acciones académicas. Solo los
+exámenes aceptan temas; las relaciones eliminan dependientes con CASCADE. Cambiar
+el tipo de un examen con temas requiere eliminarlos explícitamente primero.
+
+`AcademicRules` calcula la cercanía y preparación sin persistir colores. Inicio
+muestra hasta tres evaluaciones próximas. Estudio elige un tema del examen más
+cercano de la materia: Pendiente antes de Practicando; nunca Dominado. La sugerencia
+es informativa. Las sesiones siguen siendo Schedule y usan el timer existente.
+La nueva ruta de gestión mantiene las cuatro pestañas de navegación.
+
 ## OCR
 
 La galería entrega una URI mediante Photo Picker. La imagen se decodifica con
@@ -101,10 +119,13 @@ compuesto, evitando usar índices de una cadena normalizada de distinta longitud
 
 Las operaciones exportar/restaurar/borrar y su estado ocupado pertenecen a
 `AppViewModel`; un guard impide iniciar otra operación mientras hay una activa,
-incluso tras recrear la pantalla. Room v2 y JSON v1 se conservan. La restauración
+incluso tras recrear la pantalla. El formato JSON v1 de las tablas originales se conserva. La restauración
 valida fechas de reglas, ocurrencias e historial, además de los límites del timer
 y su asociación a una sesión de estudio pendiente. Una validación fallida revierte
 la transacción completa.
+Por el alcance solicitado, el backup no incluye las dos tablas académicas de
+Room v3. Restaurar reemplaza materias y elimina sus dependientes académicos por
+CASCADE; esta limitación está indicada en la guía de uso y en el registro de entrega.
 
 ## Privacidad
 
