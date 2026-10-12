@@ -20,6 +20,8 @@ data class AcademicEvaluation(
     val type: String = EvaluationType.EXAMEN.name,
     val date: Long,
     val completed: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val percentage: Double = 0.0,
+    val grade: Double? = null,
 )
 
 @Entity(tableName = "exam_topics", foreignKeys = [

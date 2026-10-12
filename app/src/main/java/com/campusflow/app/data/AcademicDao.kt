@@ -13,6 +13,9 @@ interface AcademicDao {
     @Query("SELECT * FROM academic_evaluations WHERE id = :id")
     suspend fun evaluation(id: Long): EvaluationWithTopics?
 
+    @Query("SELECT percentage FROM academic_evaluations WHERE subjectId = :subjectId AND id != :excludingId")
+    suspend fun otherPercentages(subjectId: Long, excludingId: Long): List<Double>
+
     @Insert suspend fun insertEvaluation(value: AcademicEvaluation): Long
     @Update suspend fun updateEvaluation(value: AcademicEvaluation)
     @Query("UPDATE academic_evaluations SET completed = :completed WHERE id = :id")

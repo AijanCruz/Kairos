@@ -56,4 +56,41 @@ class MigrationTest {
             db.query("SELECT * FROM academic_evaluations").use { assertEquals(0, it.count) }
         }
     }
+    @Test fun migration3to4PreservesEvaluationsAndTopicsWithNoInventedGrades() {
+        helper.createDatabase("academic-grading-migration", 3).apply {
+            execSQL("INSERT INTO subjects(id,name) VALUES(42,'Cálculo')")
+            execSQL("INSERT INTO academic_evaluations(id,subjectId,title,type,date,completed) VALUES(11,42,'Parcial existente','EXAMEN',20011,1),(12,42,'Quiz existente','QUIZ',20012,0)")
+            execSQL("INSERT INTO exam_topics(id,evaluationId,name,status) VALUES(55,11,'Límites','PRACTICANDO')")
+            close()
+        }
+        helper.runMigrationsAndValidate("academic-grading-migration", 4, true, CampusDatabase.MIGRATION_3_4).use { db ->
+            db.query("SELECT id,title,type,date,completed,percentage,grade FROM academic_evaluations ORDER BY id").use {
+                assertEquals(2, it.count)
+                assertTrue(it.moveToFirst())
+                assertEquals(11L, it.getLong(0)); assertEquals("Parcial existente", it.getString(1))
+                assertEquals("EXAMEN", it.getString(2)); assertEquals(20011L, it.getLong(3)); assertEquals(1, it.getInt(4))
+                assertEquals(0.0, it.getDouble(5), 0.0); assertTrue(it.isNull(6))
+                assertTrue(it.moveToNext()); assertEquals("QUIZ", it.getString(2)); assertEquals(0, it.getInt(4))
+                assertEquals(0.0, it.getDouble(5), 0.0); assertTrue(it.isNull(6))
+            }
+            db.query("SELECT evaluationId,name,status FROM exam_topics WHERE id=55").use {
+                assertTrue(it.moveToFirst()); assertEquals(11L, it.getLong(0)); assertEquals("Límites", it.getString(1)); assertEquals("PRACTICANDO", it.getString(2))
+            }
+            db.query("SELECT name FROM subjects WHERE id=42").use { assertTrue(it.moveToFirst()); assertEquals("Cálculo", it.getString(0)) }
+            db.execSQL("UPDATE academic_evaluations SET percentage=20.5,grade=80.5 WHERE id=11")
+            db.query("SELECT percentage,grade FROM academic_evaluations WHERE id=11").use { assertTrue(it.moveToFirst()); assertEquals(20.5, it.getDouble(0), 0.0); assertEquals(80.5, it.getDouble(1), 0.0) }
+            db.query("PRAGMA foreign_key_check").use { assertEquals(0, it.count) }
+        }
+    }
+
+    @Test fun migration1to4RetainsSubjects() {
+        helper.createDatabase("academic-grading-from-1", 1).apply {
+            execSQL("INSERT INTO subjects(id,name) VALUES(7,'Álgebra')")
+            close()
+        }
+        helper.runMigrationsAndValidate("academic-grading-from-1", 4, true, CampusDatabase.MIGRATION_1_2, CampusDatabase.MIGRATION_2_3, CampusDatabase.MIGRATION_3_4).use { db ->
+            db.query("SELECT name FROM subjects WHERE id=7").use { assertTrue(it.moveToFirst()); assertEquals("Álgebra", it.getString(0)) }
+            db.query("SELECT percentage,grade FROM academic_evaluations").use { assertEquals(0, it.count) }
+        }
+    }
 }

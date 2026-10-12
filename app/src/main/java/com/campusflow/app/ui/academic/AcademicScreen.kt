@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.campusflow.app.data.*
 import com.campusflow.app.domain.asDate
 import com.campusflow.app.domain.pretty
+import com.campusflow.app.domain.AcademicRules
 import com.campusflow.app.ui.AppViewModel
 import com.campusflow.app.ui.components.*
 
@@ -30,6 +31,7 @@ fun AcademicScreen(vm: AppViewModel, subjectId: Long, initialEvaluationId: Long,
     val error by vm.academicError.collectAsStateWithLifecycle()
     val subject = subjects.find { it.id == subjectId }
     val evaluations = remember(all, subjectId) { all.filter { it.evaluation.subjectId == subjectId }.sortedBy { it.evaluation.completed } }
+    val grades = remember(evaluations, subjectId) { AcademicRules.gradeSummary(evaluations.map { it.evaluation }, subjectId) }
     var expandedId by rememberSaveable { mutableStateOf<Long?>(initialEvaluationId.takeIf { it > 0 }) }
     var editId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deleteId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -46,6 +48,18 @@ fun AcademicScreen(vm: AppViewModel, subjectId: Long, initialEvaluationId: Long,
         item {
             TextButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null); Text("Volver") }
             PageHeading("Evaluaciones", subject?.name ?: "Materia no disponible")
+            if (subject != null) {
+                Spacer(Modifier.height(16.dp))
+                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Calificaciones", style = MaterialTheme.typography.titleMedium)
+                        Text("Puntos acumulados: ${AcademicRules.numberLabel(grades.accumulatedPoints)} / 100", style = MaterialTheme.typography.bodyLarge)
+                        Text("Promedio ponderado: ${grades.weightedAverage?.let { "${AcademicRules.numberLabel(it)} / 100" } ?: "Sin calificaciones con peso"}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Porcentaje pendiente: ${AcademicRules.numberLabel(grades.pendingPercentage)} %", style = MaterialTheme.typography.bodyMedium)
+                        Text("Solo cuentan las evaluaciones con nota y porcentaje. El pendiente incluye el porcentaje aún no asignado.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
         }
         if (subject != null) item {
             OutlinedButton(onClick = { vm.academicError.value = null; editId = 0 }, enabled = !saving, modifier = Modifier.fillMaxWidth()) { Text("+ Evaluación") }
@@ -56,7 +70,7 @@ fun AcademicScreen(vm: AppViewModel, subjectId: Long, initialEvaluationId: Long,
             val evaluation = item.evaluation
             Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
                 Column {
-                    EvaluationRow(item, now.toLocalDate().toEpochDay()) { expandedId = if (expandedId == evaluation.id) null else evaluation.id }
+                    EvaluationRow(item, now.toLocalDate().toEpochDay(), showGrades = true) { expandedId = if (expandedId == evaluation.id) null else evaluation.id }
                     if (expandedId == evaluation.id) Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(evaluation.date.asDate().pretty(), style = MaterialTheme.typography.bodySmall)
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -66,9 +80,9 @@ fun AcademicScreen(vm: AppViewModel, subjectId: Long, initialEvaluationId: Long,
                             IconButton(enabled = !saving, onClick = { vm.academicError.value = null; editId = evaluation.id }) { Icon(Icons.Outlined.Edit, "Editar evaluación") }
                             IconButton(enabled = !saving, onClick = { deleteId = evaluation.id }) { Icon(Icons.Outlined.DeleteOutline, "Eliminar evaluación") }
                         }
-                        if (evaluation.type == EvaluationType.EXAMEN.name) {
+                        if (AcademicRules.supportsTopics(evaluation.type)) {
                             HorizontalDivider()
-                            Text("Temas del examen", style = MaterialTheme.typography.titleSmall)
+                            Text(if (evaluation.type == EvaluationType.QUIZ.name) "Temas del quiz" else "Temas del examen", style = MaterialTheme.typography.titleSmall)
                             item.topics.sortedBy { it.id }.forEach { topic ->
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {

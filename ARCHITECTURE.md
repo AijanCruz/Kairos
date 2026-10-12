@@ -98,14 +98,25 @@ Room v3 añade solo `academic_evaluations` (id, subjectId, title, type, date,
 completed) y `exam_topics` (id, evaluationId, name, status). Las fechas son días
 de calendario (`epochDay`), no instantes ni horarios. Las tablas anteriores no
 cambian. Migración 2 → 3 aditiva, conservando la ruta 1 → 2 → 3.
+Room v4 amplía la misma entidad con `percentage REAL NOT NULL DEFAULT 0` y
+`grade REAL` nullable mediante ALTER TABLE (3 → 4). Conserva IDs, materias, temas
+y estados; no inventa notas ni pesos para las evaluaciones existentes.
 
 Un DAO y repositorio pequeños exponen evaluaciones con materia y temas como Flow.
-`AppViewModel` comparte ese estado y serializa las acciones académicas. Solo los
-exámenes aceptan temas; las relaciones eliminan dependientes con CASCADE. Cambiar
-el tipo de un examen con temas requiere eliminarlos explícitamente primero.
+`AppViewModel` comparte ese estado y serializa las acciones académicas. Exámenes
+y quizzes comparten los mismos temas; cambiar entre ellos conserva sus IDs y
+estados. Pasar a otro tipo requiere eliminar los temas explícitamente primero.
+Las relaciones eliminan dependientes con CASCADE.
+
+El repositorio valida notas y porcentajes finitos entre 0 y 100 y verifica el
+límite de peso por materia dentro de la transacción de guardado, excluyendo la
+fila editada. Se suman valores decimales con BigDecimal para evitar rechazar un
+total de 100 % por errores binarios. AcademicRules calcula aportes, promedio y
+porcentaje pendiente desde el Flow existente. Las notas null se omiten; notas
+de cero sí cuentan. El redondeo a dos decimales es solo de presentación.
 
 `AcademicRules` calcula la cercanía y preparación sin persistir colores. Inicio
-muestra hasta tres evaluaciones próximas. Estudio elige un tema del examen más
+muestra hasta tres evaluaciones próximas. Estudio elige un tema del examen o quiz más
 cercano de la materia: Pendiente antes de Practicando; nunca Dominado. La sugerencia
 es informativa. Las sesiones siguen siendo Schedule y usan el timer existente.
 La nueva ruta de gestión mantiene las cuatro pestañas de navegación.

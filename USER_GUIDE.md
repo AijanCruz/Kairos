@@ -67,12 +67,13 @@ En **Estudio → Evaluaciones de [materia] → + Evaluación** puedes crear un e
 tarea, proyecto, quiz o exposición con título y fecha límite. Toca la evaluación
 para editarla, completarla, volverla a marcar pendiente o eliminarla.
 
-En los exámenes aparece **+ Tema**. Cada tema tiene un nombre editable y uno de
+En exámenes y quizzes aparece **+ Tema**. Cada tema tiene un nombre editable y uno de
 estos estados: **Pendiente**, **Practicando** o **Dominado**. Para cambiar un examen
-con temas a otro tipo, primero elimina sus temas; no se descartan automáticamente.
+con temas a tarea, proyecto o exposición, primero elimina sus temas. Cambiar entre
+Examen y Quiz conserva todos los temas y sus estados.
 
 El punto de color indica cercanía: verde a más de 14 días, amarillo de 8 a 14 días
-y rojo a 7 días o menos (incluidas fechas vencidas). Un examen con al menos un tema
+y rojo a 7 días o menos (incluidas fechas vencidas). Un examen o quiz con al menos un tema
 y todos dominados muestra **Preparado**, aunque esté cerca. Preparado no significa
 completado: completar la evaluación es una acción separada.
 
@@ -80,11 +81,33 @@ Inicio muestra como máximo tres **Próximas evaluaciones**, ordenadas por fecha
 no completadas y desde hoy en adelante. Las vencidas y completadas se consultan
 en la materia. Tocar una de Inicio abre su gestión con los temas desplegados.
 
+### Porcentajes y calificaciones
+
+Al crear o editar una evaluación, introduce su **Porcentaje de la materia (%)**
+y, cuando la tengas, la **Nota obtenida (0–100)**. Se admiten decimales con coma
+o punto. Deja la nota vacía si aún no está calificada; puedes borrarla después.
+La suma de porcentajes de una materia no puede superar el 100 %, incluidas las
+evaluaciones pendientes o completadas. El 0 % permite dejar un peso sin asignar.
+
+La pantalla de evaluaciones de cada materia muestra:
+- **Aporte individual:** nota × porcentaje / 100.
+- **Puntos acumulados:** suma de los aportes, sobre 100 puntos de la nota final.
+- **Promedio ponderado:** puntos acumulados × 100 / porcentaje con nota.
+- **Porcentaje pendiente:** 100 menos el porcentaje con nota; incluye el aún
+  no asignado. Las evaluaciones sin nota no se consideran ceros.
+
+Por ejemplo, una nota de 80 con un peso del 20 % aporta 16 puntos; si es la única
+calificada, el promedio ponderado es 80 y queda pendiente el 80 %. Los resultados
+se actualizan al guardar notas o porcentajes. Sin calificaciones con peso no se
+muestra un promedio numérico. Completar una evaluación y calificarla son acciones
+independientes. Tras actualizar, las evaluaciones antiguas conservan sus datos
+con porcentaje inicial 0 % y nota vacía.
+
 ### Sugerencia y duración de estudio
 
-Selecciona **Materia para estudiar**. Del examen más cercano no completado y con
+Selecciona **Materia para estudiar**. Del examen o quiz más cercano no completado y con
 fecha desde hoy, se sugiere primero un tema Pendiente y luego uno Practicando.
-Los Dominados se ignoran. Si ese examen no tiene temas por preparar, no hay
+Los Dominados se ignoran. Si esa evaluación no tiene temas por preparar, no hay
 sugerencia. Cambiar la materia o ver una sugerencia no crea una sesión.
 
 En **Duración de la nueva sesión** está disponible **40 minutos**. Pulsa
