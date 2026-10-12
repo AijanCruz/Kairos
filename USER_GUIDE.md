@@ -20,8 +20,13 @@ datos de CampusFlow al actualizar con la misma firma; no hace falta desinstalar.
 
 - **+ → Agregar actividad:** nombre, categoría, fecha, hora, duración o fin,
   repetición, recordatorio y notas.
-- **Horario:** usa las flechas para cambiar semana, los días para consultar una
-  jornada, o Agenda para ver los siete días en lista.
+- **Horario → Semana:** cuadrícula permanente del horario base, de lunes a domingo
+  y de 00:00 a 24:00. Desliza horizontalmente para ver los demás días y verticalmente
+  para cambiar de hora. Toca una hora libre o **+ Bloque semanal** para agregar;
+  toca un bloque para editarlo o eliminarlo de todos sus días de repetición.
+- **Horario → Agenda:** actividades con fecha, separadas en puntuales/excepciones
+  y recurrentes del día. Usa las flechas para cambiar semana y **Día / 7 días**
+  para elegir el alcance. Las citas y evaluaciones no se convierten en horarios semanales.
 - **Tarjeta → detalles:** completar, editar esta actividad, editar próximas
   actividades de una serie, posponer o eliminar.
 - **Completar / Eliminar / Posponer:** la barra inferior ofrece DESHACER.
@@ -35,6 +40,13 @@ pospuestas. «Detener repetición» cancela las próximas pendientes de esa seri
 Si una serie cambió mientras estaba abierto su editor, vuelve a abrirla antes de
 guardar. Deshacer se rechaza si una edición posterior cambió la actividad, para
 proteger esos cambios.
+
+El horario base muestra las reglas recurrentes activas, no sus ocurrencias:
+completar, cancelar o posponer una actividad individual no borra el bloque base.
+La agenda y los recordatorios respetan las fechas de inicio/fin de cada regla;
+la plantilla permanece visible hasta detenerla o retirarla. Los bloques que cruzan
+medianoche se muestran en ambos días y los solapados en columnas paralelas.
+Las evaluaciones académicas mantienen su gestión por materia en Estudio.
 
 ## Estudio
 

@@ -43,6 +43,15 @@ al repositorio y utilizan transacciones de Room.
   compara también los datos de la ocurrencia, no solo su estado, para no
   sobrescribir una edición posterior. Las reglas se validan al guardar y restaurar.
 
+## Horario base y agenda
+
+La cuadrícula de Horario obtiene las reglas activas DAILY/WEEKLY mediante
+`CampusDao.recurringSchedules()` y Flow, sin depender del horizonte materializado
+ni de la semana consultada en Agenda. `WeeklyTimetable` divide cruces de medianoche
+y asigna columnas a solapamientos. Las reglas ONCE y las excepciones independientes
+solo aparecen por fecha en Agenda. El editor existente guarda nuevas versiones y
+`stopSeries` retira un bloque conservando historial; no cambió el esquema Room v3.
+
 ## Recordatorios
 
 Los recordatorios pertenecen a las series; se programan por ocurrencia con una

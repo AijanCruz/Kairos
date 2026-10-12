@@ -121,6 +121,7 @@ class AppUiTest {
         capture("home-dark.png")
         compose.onNodeWithText("Horario").performClick()
         compose.onNodeWithText("Tu semana").assertExists()
+        compose.onNodeWithText("Agenda").performClick()
         compose.onNodeWithContentDescription("${LocalDate.now().pretty()}, con actividades").assertIsSelected().assertHasClickAction()
         capture("schedule-dark.png")
     }

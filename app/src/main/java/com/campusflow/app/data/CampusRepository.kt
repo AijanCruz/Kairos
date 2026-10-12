@@ -8,6 +8,7 @@ import java.time.LocalDate
 class CampusRepository(val db: CampusDatabase, private val onChanged: () -> Unit = {}) {
     val dao = db.dao()
     val activities = dao.activities()
+    val recurringSchedules = dao.recurringSchedules()
     val categories = dao.categories()
     val subjects = dao.subjects()
     val routines = dao.routines()

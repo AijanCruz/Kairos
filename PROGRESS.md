@@ -1,5 +1,36 @@
 # Kairos — registro de desarrollo
 
+## Horario semanal permanente — completado
+
+- Cuadrícula lunes–domingo, 00:00–24:00, desplazamiento horizontal/vertical,
+  colores Material 3, bloques solapados en columnas y continuación al día siguiente.
+- Base obtenida de las reglas activas DAILY/WEEKLY, independiente de fechas,
+  horizonte de ocurrencias y estado de completado. Inicio/fin de las reglas siguen
+  limitando sus ocurrencias reales; la plantilla no desaparece por cambiar de fecha.
+- Alta desde una hora libre, edición mediante ActivityEditor y retirada usando
+  stopSeries con confirmación. Conserva las ocurrencias históricas y sus datos.
+- Agenda por fecha con Día/7 días, separando puntuales/excepciones de recurrentes.
+  Las evaluaciones académicas permanecen en su flujo actual y nunca van a la cuadrícula.
+- Room v3 sin cambios de esquema, sin migración ni dependencias nuevas.
+  Launcher, branding, entrenamientos y funciones académicas sin modificaciones.
+
+Archivos: CampusDao, CampusRepository, AppViewModel, CampusRoot, ScheduleScreen,
+ActivityEditor; nuevos WeeklyTimetable, WeeklyTimetableGrid y ScheduleBlockDetails.
+Tests: WeeklyTimetableTest, TimetableUiTest, RepositoryTest y ajuste de AppUiTest
+para seleccionar Agenda antes de comprobar los días con fecha.
+
+Verificación: assembleDebug correcto; **13 tests JVM** (WeeklyTimetableTest y
+CalendarRulesTest) y **19 tests Android** (RepositoryTest, TimetableUiTest y
+AppUiTest) aprobados en API 35. Lint: **0 errores, 19 avisos** de dependencias y
+recursos del launcher ya existentes, fuera de este alcance.
+El primer intento Android no inició tests por un ANR durante el arranque del
+emulador bajo presión de memoria/CPU; la repetición con el arranque terminado
+completó los 19 tests sin fallos.
+
+APK actualizado: `dist/Kairos-1.0.0-debug.apk`.
+
+---
+
 ## Capa académica sencilla — entrega completada
 
 Implementada según el nuevo alcance limitado del usuario; no se rediseñó Inicio

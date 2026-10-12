@@ -24,7 +24,7 @@ import java.time.format.TextStyle
 @Composable
 fun ActivityEditor(
     initial: Schedule?, category: String, preferences: UserPreferences, categories: List<Category>,
-    subjects: List<Subject>, routines: List<RoutineWithExercises>, saving: Boolean, editingSingle: Boolean = false, saveError: String? = null,
+    subjects: List<Subject>, routines: List<RoutineWithExercises>, saving: Boolean, editingSingle: Boolean = false, saveError: String? = null, recurringOnly: Boolean = false,
     onClose: () -> Unit, onSave: (Schedule) -> Unit,
 ) {
     var title by rememberSaveable { mutableStateOf(initial?.title ?: "") }
@@ -44,13 +44,14 @@ fun ActivityEditor(
     val previewDuration = duration.toIntOrNull()?.coerceIn(1, 1440) ?: 60
     Dialog(onDismissRequest = { if (!saving) onClose() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(modifier = Modifier.fillMaxSize().safeDrawingPadding().imePadding(), topBar = {
-            TopAppBar(title = { Text(if (!editingSingle && (initial == null || initial.id == 0L)) "Nueva actividad" else "Editar actividad") }, navigationIcon = {
+            TopAppBar(title = { Text(if (recurringOnly) { if (initial?.id == 0L) "Nuevo bloque semanal" else "Editar bloque semanal" } else if (!editingSingle && (initial == null || initial.id == 0L)) "Nueva actividad" else "Editar actividad") }, navigationIcon = {
                 IconButton(onClick = onClose, enabled = !saving) { Icon(Icons.Outlined.Close, "Cerrar") }
             }, actions = {
                 TextButton(enabled = !saving, onClick = {
                     val minutes = duration.toIntOrNull()
                     error = when {
-                        title.isBlank() -> "Escribe un nombre para la actividad."
+                         title.isBlank() -> "Escribe un nombre para la actividad."
+                         recurringOnly && repeat == Repeat.ONCE.name -> "El horario base requiere una repetición diaria o semanal."
                         minutes == null || minutes !in 1..1440 -> "La duración debe estar entre 1 y 1440 minutos."
                         repeat == Repeat.WEEKLY.name && weekdays.isBlank() -> "Selecciona al menos un día."
                         endDay != null && endDay!! < day -> "Revisa la fecha de fin."
@@ -76,7 +77,7 @@ fun ActivityEditor(
                 if (useEndTime) TimeField((minute + previewDuration) % 1440, "Hora final") {
                     duration = ((it - minute + 1440) % 1440).let { difference -> if (difference == 0) 1440 else difference }.toString()
                 }
-                if (!editingSingle) ChoiceField("Repetición", repeat, Repeat.entries.map { it.name }, { key -> Repeat.valueOf(key).label }) { repeat = it }
+                if (!editingSingle) ChoiceField("Repetición", repeat, Repeat.entries.filter { !recurringOnly || it != Repeat.ONCE }.map { it.name }, { key -> Repeat.valueOf(key).label }) { repeat = it }
                 if (repeat == Repeat.WEEKLY.name) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         (1..7).forEach { number ->
