@@ -24,6 +24,10 @@ datos de CampusFlow al actualizar con la misma firma; no hace falta desinstalar.
   y de 00:00 a 24:00. Desliza horizontalmente para ver los demás días y verticalmente
   para cambiar de hora. Toca una hora libre o **+ Bloque semanal** para agregar;
   toca un bloque para editarlo o eliminarlo de todos sus días de repetición.
+  **Ir a hoy** centra el día y la hora actuales; **Ir a actividad** permite saltar
+  a un bloque por su nombre. Tocar el encabezado de un día lleva a su primer bloque.
+  Las franjas breves se amplían para poder leerlas y tocarlas, conservando sus horas
+  reales. Los bloques solapados tienen columnas más anchas e iconos por categoría.
 - **Horario → Agenda:** actividades con fecha, separadas en puntuales/excepciones
   y recurrentes del día. Usa las flechas para cambiar semana y **Día / 7 días**
   para elegir el alcance. Las citas y evaluaciones no se convierten en horarios semanales.
@@ -103,6 +107,21 @@ muestra un promedio numérico. Completar una evaluación y calificarla son accio
 independientes. Tras actualizar, las evaluaciones antiguas conservan sus datos
 con porcentaje inicial 0 % y nota vacía.
 
+### Meta final y resumen de temas
+
+En las evaluaciones de una materia, pulsa **Establecer meta final** para guardar
+una nota objetivo de 0 a 100. Puedes editarla o dejar el campo vacío para quitarla.
+La app muestra **Meta asegurada**, **Meta alcanzable** o **Meta matemáticamente
+imposible**, según los puntos acumulados y el porcentaje que quede por calificar.
+Cuando es alcanzable indica el promedio ponderado necesario en ese porcentaje:
+`(meta − puntos acumulados) × 100 / porcentaje pendiente`.
+
+El cálculo no convierte notas pendientes en ceros. Si todavía no asignaste todos
+los porcentajes, se indica cuánto falta y que el cálculo supone completar el 100 %
+de la materia. El promedio necesario se redondea hacia arriba a dos decimales.
+Debajo aparece el número de temas **Pendientes**, **Practicando** y **Dominados**
+de los exámenes y quizzes de esa materia, incluidas las evaluaciones completadas.
+
 ### Sugerencia y duración de estudio
 
 Selecciona **Materia para estudiar**. Del examen o quiz más cercano no completado y con
@@ -152,10 +171,16 @@ datos y las alarmas actuales. Las copias válidas anteriores de CampusFlow sigue
 siendo compatibles. Durante exportar, restaurar o borrar, los botones de datos
 permanecen bloqueados aunque gires la pantalla o vuelvas a Configuración.
 
-**Límite de la capa académica:** el backup no se amplió en esta entrega. Sus JSON
-no incluyen evaluaciones ni temas. Una restauración reemplaza las materias y,
-por esa relación, elimina las evaluaciones y temas actuales; el archivo no puede
-recuperarlos. Eliminar una materia también elimina sus evaluaciones y temas.
+Las copias nuevas (formato 2) incluyen **evaluaciones, temas, porcentajes, notas y
+metas**, conservando sus relaciones con las materias. Restaurar una copia completa
+reemplaza los datos por los del archivo después de confirmar.
+
+Las copias antiguas (formato 1) siguen admitidas. Como no contienen datos académicos,
+se conservan los que ya tienes, incluidas las materias necesarias para sus relaciones.
+Si un ID o nombre de materia del archivo entra en conflicto con esos datos, se
+rechaza la restauración entera sin modificar nada. Una copia inválida, incompleta
+o con relaciones rotas tampoco se restaura parcialmente. Eliminar una materia
+manualmente elimina sus evaluaciones, temas y meta.
 
 ## Recordatorios y límites del sistema
 
