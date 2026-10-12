@@ -17,7 +17,7 @@ import com.campusflow.app.data.*
 import com.campusflow.app.domain.*
 
 @Composable
-fun EvaluationRow(item: EvaluationWithTopics, today: Long, onOpen: () -> Unit) {
+fun EvaluationRow(item: EvaluationWithTopics, today: Long, showGrades: Boolean = false, onOpen: () -> Unit) {
     val evaluation = item.evaluation
     val prepared = AcademicRules.prepared(item)
     val urgency = AcademicRules.urgency(evaluation.date, today)
@@ -41,7 +41,7 @@ fun EvaluationRow(item: EvaluationWithTopics, today: Long, onOpen: () -> Unit) {
     val detail = when {
         evaluation.completed -> "Completada"
         prepared -> "Preparado"
-        evaluation.type != EvaluationType.EXAMEN.name -> null
+        !AcademicRules.supportsTopics(evaluation.type) -> null
         item.topics.isEmpty() -> "Sin temas definidos"
         remaining == 1 -> "1 tema pendiente"
         else -> "$remaining temas pendientes"
@@ -56,6 +56,10 @@ fun EvaluationRow(item: EvaluationWithTopics, today: Long, onOpen: () -> Unit) {
             Text(evaluation.title, style = MaterialTheme.typography.titleMedium)
             Text("${item.subject.name} · ${EvaluationType.valueOf(evaluation.type).label}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(listOfNotNull(AcademicRules.dateLabel(evaluation.date, today), detail).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = if (prepared) accent else MaterialTheme.colorScheme.onSurfaceVariant)
+            if (showGrades) {
+                val contribution = AcademicRules.contribution(evaluation)
+                Text("${AcademicRules.numberLabel(evaluation.percentage)} % · " + if (contribution == null) "Sin calificar" else "Nota ${AcademicRules.numberLabel(evaluation.grade!!)} / 100 · Aporte ${AcademicRules.numberLabel(contribution)} puntos", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

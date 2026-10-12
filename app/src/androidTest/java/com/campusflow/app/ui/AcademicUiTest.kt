@@ -113,4 +113,39 @@ class AcademicUiTest {
         StudyRepository(app.repository).discard()
         assertEquals(Status.PENDING, app.repository.dao.occurrence(created.occurrence.id)!!.status)
     }
+    @Test fun quizGradesUpdateSubjectSummaryAndBlankGradeIsNotZero() = runBlocking {
+        val academic = AcademicRepository(app.database)
+        val id = academic.saveEvaluation(AcademicEvaluation(subjectId = subjectId, title = "Quiz con nota", type = "QUIZ", date = LocalDate.now().toEpochDay()))
+        academic.saveTopic(ExamTopic(evaluationId = id, name = "Funciones"))
+        openSubject()
+        scrollTo("Quiz con nota")
+        compose.onNodeWithText("Quiz con nota").performClick()
+        compose.onNodeWithText("Temas del quiz").assertExists()
+
+        fun editNumbers(percentage: String, grade: String) {
+            scrollTo("Quiz con nota")
+            compose.onNodeWithContentDescription("Editar evaluación").performScrollTo().performClick()
+            compose.onNodeWithText("Porcentaje de la materia (%)").performScrollTo().performTextReplacement(percentage)
+            compose.onNodeWithText("Nota obtenida (0–100)").performScrollTo().performTextReplacement(grade)
+            compose.onNodeWithText("Guardar", useUnmergedTree = true).performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Guardar").fetchSemanticsNodes().isEmpty() }
+        }
+
+        editNumbers("20", "80,5")
+        scrollTo("Puntos acumulados: 16,1 / 100")
+        compose.onNodeWithText("Promedio ponderado: 80,5 / 100").assertExists()
+        compose.onNodeWithText("Porcentaje pendiente: 80 %").assertExists()
+        editNumbers("40", "90")
+        scrollTo("Puntos acumulados: 36 / 100")
+        compose.onNodeWithText("Promedio ponderado: 90 / 100").assertExists()
+        compose.onNodeWithText("Porcentaje pendiente: 60 %").assertExists()
+        editNumbers("40", "")
+        scrollTo("Puntos acumulados: 0 / 100")
+        compose.onNodeWithText("Promedio ponderado: Sin calificaciones con peso").assertExists()
+        compose.onNodeWithText("Porcentaje pendiente: 100 %").assertExists()
+        val stored = app.database.academicDao().evaluation(id)!!
+        assertNull(stored.evaluation.grade)
+        assertEquals("Funciones", stored.topics.single().name)
+        assertEquals("PENDIENTE", stored.topics.single().status)
+    }
 }

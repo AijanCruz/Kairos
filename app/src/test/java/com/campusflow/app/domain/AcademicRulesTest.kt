@@ -72,4 +72,16 @@ class AcademicRulesTest {
         assertEquals("Hoy", AcademicRules.dateLabel(deadline, deadline))
         assertEquals("Venció hace 1 día", AcademicRules.dateLabel(deadline, deadline + 1))
     }
+    @Test fun quizzesSharePreparationAndSuggestionRules() {
+        val quiz = exam(1, 1, states = arrayOf("DOMINADO", "PRACTICANDO", "PENDIENTE")).let { it.copy(evaluation = it.evaluation.copy(type = "QUIZ")) }
+        val laterExam = exam(2, 2, states = arrayOf("PENDIENTE"))
+        assertFalse(AcademicRules.prepared(quiz))
+        assertEquals(quiz.topics[2], AcademicRules.suggestion(listOf(laterExam, quiz), 1, today))
+        val practicing = quiz.copy(topics = quiz.topics.take(2))
+        assertEquals(quiz.topics[1], AcademicRules.suggestion(listOf(practicing), 1, today))
+        val ready = quiz.copy(topics = quiz.topics.map { it.copy(status = "DOMINADO") })
+        assertTrue(AcademicRules.prepared(ready))
+        assertNull(AcademicRules.suggestion(listOf(ready), 1, today))
+        assertFalse(AcademicRules.prepared(quiz.copy(topics = emptyList())))
+    }
 }

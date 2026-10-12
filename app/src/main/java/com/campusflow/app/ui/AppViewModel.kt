@@ -28,6 +28,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val timer = study.timer.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     val studyRecords = study.records.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val activities = repository.activities.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val recurringSchedules = repository.recurringSchedules.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val categories = repository.categories.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Categories.defaults)
     val subjects = repository.subjects.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val routines = repository.routines.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
