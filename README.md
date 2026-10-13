@@ -85,10 +85,11 @@ en `Pictures/CampusFlowVerification` del emulador.
 - `ui/`: pantallas Compose, componentes reutilizables y estado de ViewModel.
 - `reminders/`: alarmas, notificaciones y trabajo persistente.
 - `ocr/`: reconocimiento on-device e intérprete sustituible.
-- `app/schemas/`: versiones exportadas de Room y migraciones 1 → 2 → 3.
+- `app/schemas/`: versiones exportadas de Room y migraciones 1 → 2 → 3 → 4 → 5.
 
-La capa académica usa Room v3 sin alterar las tablas existentes. El backup actual
-no incluye evaluaciones ni temas; ver el alcance y las limitaciones en `USER_GUIDE.md`.
+La capa académica usa Room v5, con porcentajes, notas y metas por materia.
+El backup completo incluye evaluaciones, temas y metas y admite copias antiguas
+sin descartar datos académicos locales. Ver las reglas de restauración en `USER_GUIDE.md`.
 
 La distribución de producción necesita una clave de firma privada propia; este
 proyecto entrega la variante de desarrollo para instalación y pruebas personales.

@@ -5,6 +5,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AcademicDao {
+    @Query("SELECT * FROM subject_goals") fun goals(): Flow<List<SubjectGoal>>
+    @Upsert suspend fun saveGoal(value: SubjectGoal)
+    @Query("DELETE FROM subject_goals WHERE subjectId = :subjectId") suspend fun deleteGoal(subjectId: Long)
     @Transaction
     @Query("SELECT * FROM academic_evaluations ORDER BY date, id")
     fun evaluations(): Flow<List<EvaluationWithTopics>>

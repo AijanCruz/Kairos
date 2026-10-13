@@ -39,3 +39,8 @@ data class EvaluationWithTopics(
     @Relation(parentColumn = "subjectId", entityColumn = "id") val subject: Subject,
     @Relation(parentColumn = "id", entityColumn = "evaluationId") val topics: List<ExamTopic>,
 )
+
+@Entity(tableName = "subject_goals", foreignKeys = [
+    ForeignKey(entity = Subject::class, parentColumns = ["id"], childColumns = ["subjectId"], onDelete = ForeignKey.CASCADE),
+])
+data class SubjectGoal(@PrimaryKey val subjectId: Long, val targetGrade: Double)

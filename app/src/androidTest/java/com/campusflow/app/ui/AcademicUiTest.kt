@@ -43,7 +43,8 @@ class AcademicUiTest {
         awaitText("Modo enfoque")
         scrollTo("Evaluaciones de $subjectName")
         compose.onNodeWithText("Evaluaciones de $subjectName").performClick()
-        awaitText("+ Evaluación")
+        awaitText("Evaluaciones")
+        scrollTo("+ Evaluación")
     }
 
     @Test fun createExamRecreateDraftAddTopicPrepareAndCompleteFromHome() {
@@ -147,5 +148,32 @@ class AcademicUiTest {
         assertNull(stored.evaluation.grade)
         assertEquals("Funciones", stored.topics.single().name)
         assertEquals("PENDIENTE", stored.topics.single().status)
+    }
+    @Test fun subjectGoalPersistsAndUpdatesWithGradesAndTopicSummary() = runBlocking {
+        val academic = AcademicRepository(app.database)
+        val id = academic.saveEvaluation(AcademicEvaluation(subjectId = subjectId, title = "Examen meta", date = LocalDate.now().toEpochDay(), percentage = 40.0, grade = 80.0))
+        val quiz = academic.saveEvaluation(AcademicEvaluation(subjectId = subjectId, title = "Quiz meta", type = "QUIZ", date = LocalDate.now().plusDays(1).toEpochDay(), percentage = 60.0))
+        TopicStatus.entries.forEach { academic.saveTopic(ExamTopic(evaluationId = quiz, name = it.label, status = it.name)) }
+        openSubject()
+        scrollTo("Establecer meta final")
+        compose.onNodeWithText("Establecer meta final").performClick()
+        compose.onNodeWithText("Nota objetivo (0–100)").performTextInput("80")
+        compose.onNodeWithText("Guardar meta").performClick()
+        awaitText("Meta alcanzable")
+        compose.onNodeWithText("Necesitas un promedio de 80 / 100 en el 60 % restante.").assertExists()
+        compose.onNodeWithText("Pendientes: 1 · Practicando: 1 · Dominados: 1").assertExists()
+        compose.activityRule.scenario.recreate()
+        awaitText("Meta final: 80 / 100")
+        assertEquals(80.0, AcademicRepository(app.database).goals.first().first { it.subjectId == subjectId }.targetGrade, 0.0)
+        val evaluation = app.database.academicDao().evaluation(id)!!.evaluation
+        academic.saveEvaluation(evaluation.copy(grade = 20.0))
+        awaitText("Meta matemáticamente imposible")
+        academic.saveGoal(subjectId, 5.0)
+        awaitText("Meta asegurada")
+        compose.onNodeWithText("Meta final: 5 / 100").performScrollTo().performClick()
+        compose.onNodeWithText("Nota objetivo (0–100)").performTextReplacement("")
+        compose.onNodeWithText("Guardar meta").performClick()
+        awaitText("Establecer meta final")
+        assertTrue(academic.goals.first().none { it.subjectId == subjectId })
     }
 }

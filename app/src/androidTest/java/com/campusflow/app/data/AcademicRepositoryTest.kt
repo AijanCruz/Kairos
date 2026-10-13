@@ -157,4 +157,21 @@ class AcademicRepositoryTest {
         assertFalse(cleared.completed)
         assertNull(AcademicRules.gradeSummary(listOf(cleared), subjectId).weightedAverage)
     }
+    @Test fun goalPersistsThroughSubjectRenameAndCanBeRemoved() = runBlocking {
+        repo.saveGoal(subjectId, 80.5)
+        campus.dao.updateSubject(Subject(subjectId, "Cálculo avanzado"))
+        assertEquals(SubjectGoal(subjectId, 80.5), AcademicRepository(db).goals.first().single())
+        repo.saveGoal(subjectId, null)
+        assertTrue(repo.goals.first().isEmpty())
+        assertEquals("Cálculo avanzado", campus.subjects.first().single().name)
+    }
+    @Test fun invalidGoalKeepsPreviousValueAndSubjectDeletionRemovesIt() = runBlocking {
+        repo.saveGoal(subjectId, 80.0)
+        for (value in listOf(-1.0, 101.0, Double.NaN)) {
+            try { repo.saveGoal(subjectId, value); fail("Invalid target") } catch (_: IllegalArgumentException) { }
+        }
+        assertEquals(80.0, repo.goals.first().single().targetGrade, 0.0)
+        campus.dao.deleteSubject(Subject(subjectId, "Cálculo"))
+        assertTrue(repo.goals.first().isEmpty())
+    }
 }

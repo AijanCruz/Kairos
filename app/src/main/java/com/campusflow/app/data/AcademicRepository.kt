@@ -7,6 +7,12 @@ import java.time.LocalDate
 class AcademicRepository(private val db: CampusDatabase) {
     private val dao = db.academicDao()
     val evaluations = dao.evaluations()
+    val goals = dao.goals()
+
+    suspend fun saveGoal(subjectId: Long, target: Double?) {
+        AcademicRules.validateGrading(0.0, target)
+        if (target == null) dao.deleteGoal(subjectId) else dao.saveGoal(SubjectGoal(subjectId, target))
+    }
 
     suspend fun saveEvaluation(value: AcademicEvaluation): Long = db.withTransaction {
         require(value.title.isNotBlank()) { "Escribe el título de la evaluación." }

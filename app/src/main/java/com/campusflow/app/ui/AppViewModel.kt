@@ -22,6 +22,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val study = StudyRepository(repository)
     val academic = AcademicRepository(container.database)
     val evaluations = academic.evaluations.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val academicGoals = academic.goals.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val academicSaving = kotlinx.coroutines.flow.MutableStateFlow(false)
     val academicError = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val workout = WorkoutRepository(repository)

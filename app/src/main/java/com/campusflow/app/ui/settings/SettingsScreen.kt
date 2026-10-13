@@ -65,7 +65,7 @@ fun SettingsScreen(vm: AppViewModel, preferences: UserPreferences, onBack: () ->
                 Icon(Icons.Outlined.Lock, null, tint = MaterialTheme.colorScheme.primary)
                 Text("Tus planes se quedan contigo", style = MaterialTheme.typography.titleMedium)
                 Text("Sin cuenta, sin anuncios y sin servidores. El OCR se procesa localmente. Las copias automáticas en la nube están desactivadas.", style = MaterialTheme.typography.bodyMedium)
-                Text("La copia manual incluye actividades, materias, rutinas, sesiones e historial. Tú eliges dónde guardarla; las preferencias de apariencia no se incluyen.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("La copia manual incluye actividades, materias, evaluaciones, temas, porcentajes, notas, metas, rutinas, sesiones e historial. Tú eliges dónde guardarla; las preferencias de apariencia no se incluyen.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (dataBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 OutlinedButton(enabled = !dataBusy, onClick = { export.launch("Kairos-${LocalDate.now()}.json") }, modifier = Modifier.fillMaxWidth()) { Text("Exportar copia de datos") }
                 OutlinedButton(enabled = !dataBusy, onClick = { import.launch(arrayOf("application/json", "text/plain")) }, modifier = Modifier.fillMaxWidth()) { Text("Restaurar copia") }
@@ -81,7 +81,7 @@ fun SettingsScreen(vm: AppViewModel, preferences: UserPreferences, onBack: () ->
             }
         }
     }
-    importUri?.let { uri -> AlertDialog(onDismissRequest = { importUri = null }, title = { Text("¿Restaurar esta copia?") }, text = { Text("Reemplazará todos los datos actuales. Exporta una copia antes si quieres conservarlos. Las alarmas se reprogramarán.") }, confirmButton = {
+    importUri?.let { uri -> AlertDialog(onDismissRequest = { importUri = null }, title = { Text("¿Restaurar esta copia?") }, text = { Text("Una copia completa reemplazará los datos actuales por los del archivo. Exporta una copia antes si quieres conservarlos. Las copias antiguas conservan tus evaluaciones, temas y metas actuales si sus materias son compatibles; si hay conflictos, no se cambia nada. Las alarmas se reprogramarán.") }, confirmButton = {
         TextButton(enabled = !dataBusy, onClick = {
             importUri = null
             vm.restoreData(uri.toUri())

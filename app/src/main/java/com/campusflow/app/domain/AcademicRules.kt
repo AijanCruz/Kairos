@@ -14,6 +14,10 @@ data class AcademicGradeSummary(
     val pendingPercentage: Double,
 )
 
+enum class GradeGoalStatus { SECURED, REACHABLE, IMPOSSIBLE }
+data class GradeGoalResult(val status: GradeGoalStatus, val requiredAverage: Double?, val unassignedPercentage: Double)
+data class TopicSummary(val pending: Int, val practicing: Int, val mastered: Int)
+
 object AcademicRules {
     fun supportsTopics(type: String): Boolean = type == EvaluationType.EXAMEN.name || type == EvaluationType.QUIZ.name
 
@@ -42,6 +46,27 @@ object AcademicRules {
         }
         val average = if (graded.signum() == 0) null else points.movePointRight(2).divide(graded, MathContext.DECIMAL64).toDouble()
         return AcademicGradeSummary(points.toDouble(), average, graded.toDouble(), (BigDecimal.valueOf(100) - graded).toDouble())
+    }
+
+    fun goalResult(evaluations: List<AcademicEvaluation>, subjectId: Long, target: Double): GradeGoalResult {
+        validateGrading(0.0, target)
+        val summary = gradeSummary(evaluations, subjectId)
+        val assigned = evaluations.filter { it.subjectId == subjectId }.fold(BigDecimal.ZERO) { sum, item -> sum + BigDecimal.valueOf(item.percentage) }
+        val unassigned = (BigDecimal.valueOf(100) - assigned).toDouble()
+        val needed = BigDecimal.valueOf(target) - BigDecimal.valueOf(summary.accumulatedPoints)
+        val remaining = BigDecimal.valueOf(summary.pendingPercentage)
+        if (needed.signum() <= 0) return GradeGoalResult(GradeGoalStatus.SECURED, null, unassigned)
+        if (remaining.signum() == 0) return GradeGoalResult(GradeGoalStatus.IMPOSSIBLE, null, unassigned)
+        val required = needed.movePointRight(2).divide(remaining, MathContext.DECIMAL64).toDouble()
+        return GradeGoalResult(if (needed > remaining) GradeGoalStatus.IMPOSSIBLE else GradeGoalStatus.REACHABLE, required, unassigned)
+    }
+
+    fun requiredGradeLabel(value: Double): String = BigDecimal.valueOf(value).setScale(2, RoundingMode.CEILING)
+        .stripTrailingZeros().toPlainString().replace('.', ',')
+
+    fun topicSummary(items: List<EvaluationWithTopics>, subjectId: Long): TopicSummary {
+        val topics = items.filter { it.evaluation.subjectId == subjectId && supportsTopics(it.evaluation.type) }.flatMap { it.topics }
+        return TopicSummary(topics.count { it.status == TopicStatus.PENDIENTE.name }, topics.count { it.status == TopicStatus.PRACTICANDO.name }, topics.count { it.status == TopicStatus.DOMINADO.name })
     }
 
     fun parseGradingNumber(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()
