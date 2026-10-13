@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Category::class, Subject::class, WorkoutRoutine::class, Exercise::class, Schedule::class, Occurrence::class, RescheduleHistory::class, StudyRecord::class, WorkoutRecord::class, StudyTimer::class, ReminderState::class, AcademicEvaluation::class, ExamTopic::class], version = 3, exportSchema = true)
+@Database(entities = [Category::class, Subject::class, WorkoutRoutine::class, Exercise::class, Schedule::class, Occurrence::class, RescheduleHistory::class, StudyRecord::class, WorkoutRecord::class, StudyTimer::class, ReminderState::class, AcademicEvaluation::class, ExamTopic::class, SubjectGoal::class], version = 5, exportSchema = true)
 abstract class CampusDatabase : RoomDatabase() {
     abstract fun dao(): CampusDao
     abstract fun academicDao(): AcademicDao
@@ -24,6 +24,17 @@ abstract class CampusDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_exam_topics_evaluationId ON exam_topics(evaluationId)")
             }
         }
-        fun create(context: Context): CampusDatabase = Room.databaseBuilder(context, CampusDatabase::class.java, "campusflow.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+        val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE academic_evaluations ADD COLUMN percentage REAL NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE academic_evaluations ADD COLUMN grade REAL")
+            }
+        }
+        val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS subject_goals (subjectId INTEGER NOT NULL, targetGrade REAL NOT NULL, PRIMARY KEY(subjectId), FOREIGN KEY(subjectId) REFERENCES subjects(id) ON UPDATE NO ACTION ON DELETE CASCADE)")
+            }
+        }
+        fun create(context: Context): CampusDatabase = Room.databaseBuilder(context, CampusDatabase::class.java, "campusflow.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
     }
 }

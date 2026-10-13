@@ -18,6 +18,8 @@ interface CampusDao {
     @Upsert suspend fun saveSchedule(value: Schedule): Long
     @Query("SELECT * FROM schedules WHERE id = :id") suspend fun schedule(id: Long): Schedule?
     @Query("SELECT * FROM schedules WHERE active = 1") suspend fun activeSchedules(): List<Schedule>
+    @Query("SELECT * FROM schedules WHERE active = 1 AND repeat IN ('DAILY', 'WEEKLY') ORDER BY startMinute, id")
+    fun recurringSchedules(): Flow<List<Schedule>>
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertOccurrences(values: List<Occurrence>)
     @Update suspend fun updateOccurrence(value: Occurrence)
     @Query("SELECT * FROM occurrences WHERE id = :id") suspend fun occurrence(id: Long): Occurrence?

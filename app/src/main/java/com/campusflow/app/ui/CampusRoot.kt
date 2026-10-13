@@ -53,6 +53,7 @@ fun CampusRoot(vm: AppViewModel) {
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route ?: "home"
     val activities by vm.activities.collectAsStateWithLifecycle()
+    val recurringSchedules by vm.recurringSchedules.collectAsStateWithLifecycle()
     val categories by vm.categories.collectAsStateWithLifecycle()
     val subjects by vm.subjects.collectAsStateWithLifecycle()
     val evaluations by vm.evaluations.collectAsStateWithLifecycle()
@@ -62,12 +63,15 @@ fun CampusRoot(vm: AppViewModel) {
     val now by vm.now.collectAsStateWithLifecycle()
     var addMenu by remember { mutableStateOf(false) }
     var editor by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(editor) { if (editor) vm.saveError.value = null }
+    var baseEditor by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(editor) { if (editor) vm.saveError.value = null else baseEditor = false }
     var initial by rememberSaveable { mutableStateOf<Schedule?>(null) }
     var editOccurrenceId by rememberSaveable { mutableStateOf<Long?>(null) }
     var newCategory by rememberSaveable { mutableStateOf(Categories.PERSONAL) }
     var detailId by rememberSaveable { mutableStateOf<Long?>(null) }
     var stopId by remember { mutableStateOf<Long?>(null) }
+    var stopFromBase by remember { mutableStateOf(false) }
+    var blockId by rememberSaveable { mutableStateOf<Long?>(null) }
     var moveId by rememberSaveable { mutableStateOf<Long?>(null) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -116,7 +120,11 @@ fun CampusRoot(vm: AppViewModel) {
             NavHost(navController = nav, startDestination = "home", modifier = Modifier.widthIn(max = 840.dp).fillMaxSize(), enterTransition = { fadeIn(tween(200)) }, exitTransition = { fadeOut(tween(120)) }) {
                 destinations.forEach { destination ->
                     composable(destination.route) {
-                        if (destination.route == "schedule") ScheduleScreen(activities, { detailId = it.occurrence.id }, vm::complete) { from, to -> vm.perform { vm.repository.generateRange(from, to) } }
+                        if (destination.route == "schedule") ScheduleScreen(activities, recurringSchedules, { detailId = it.occurrence.id }, vm::complete, { blockId = it.id }, { day, minute ->
+                            val start = java.time.LocalDate.now().with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.of(day)))
+                            initial = Schedule(title = "", category = Categories.UNIVERSITY, startDay = start.toEpochDay(), startMinute = minute, durationMinutes = 60, repeat = "WEEKLY", weekdays = day.toString(), reminderMinutes = preferences.reminderMinutes)
+                            editOccurrenceId = null; baseEditor = true; editor = true
+                        }) { from, to -> vm.perform { vm.repository.generateRange(from, to) } }
                         else if (destination.route == "home") DashboardScreen(activities, now, remindersReady && preferences.notifications, { detailId = it.occurrence.id }, vm::complete, { addMenu = true }, { nav.navigate("settings") }, evaluations, { nav.navigate("academics/${it.evaluation.subjectId}/${it.evaluation.id}") })
                         else if (destination.route == "study") StudyScreen(vm, activities, subjects, { detailId = it.occurrence.id }, { subjectId, minutes ->
                             initial = Schedule(title = "", category = Categories.STUDY, startDay = java.time.LocalDate.now().toEpochDay(), startMinute = 16 * 60, durationMinutes = minutes, subjectId = subjectId, reminderMinutes = preferences.reminderMinutes)
@@ -159,14 +167,19 @@ fun CampusRoot(vm: AppViewModel) {
                 Spacer(Modifier.height(20.dp))
             }
         }
-        if (editor) ActivityEditor(initial, newCategory, preferences, categories, subjects, routines, saving, editOccurrenceId != null, saveError, { editor = false }) { value -> vm.saveSchedule(value, editOccurrenceId) { editor = false } }
+        if (editor) ActivityEditor(initial, newCategory, preferences, categories, subjects, routines, saving, editOccurrenceId != null, saveError, baseEditor, { editor = false }) { value -> vm.saveSchedule(value, editOccurrenceId) { editor = false } }
+        recurringSchedules.find { it.id == blockId }?.let { schedule ->
+            ScheduleBlockDetails(schedule, { blockId = null }, {
+                initial = schedule; editOccurrenceId = null; baseEditor = true; editor = true; blockId = null
+            }, { stopId = schedule.id; stopFromBase = true; blockId = null })
+        }
         activities.find { it.occurrence.id == detailId }?.let { item ->
             val history by remember(item.occurrence.id) { vm.repository.dao.history(item.occurrence.id) }.collectAsStateWithLifecycle(emptyList())
             ActivityDetails(item, history, { detailId = null }, {
                 editOccurrenceId = item.occurrence.id
                 initial = item.schedule.copy(id = 0, startDay = item.occurrence.day, startMinute = item.occurrence.minute, repeat = "ONCE", endDay = null)
                 editor = true; detailId = null
-            }, { editOccurrenceId = null; initial = item.schedule; editor = true; detailId = null }, { vm.delete(item); detailId = null }, { vm.complete(item); detailId = null }, { stopId = item.schedule.id; detailId = null }, { moveId = item.occurrence.id; detailId = null })
+            }, { editOccurrenceId = null; initial = item.schedule; editor = true; detailId = null }, { vm.delete(item); detailId = null }, { vm.complete(item); detailId = null }, { stopId = item.schedule.id; stopFromBase = false; detailId = null }, { moveId = item.occurrence.id; detailId = null })
         }
         activities.find { it.occurrence.id == moveId }?.let { item ->
             RescheduleDialog(item, { moveId = null }) { day, minute ->
@@ -178,8 +191,8 @@ fun CampusRoot(vm: AppViewModel) {
                 }
             }
         }
-        stopId?.let { id -> AlertDialog(onDismissRequest = { stopId = null }, title = { Text("¿Detener la serie?") }, text = { Text("Se cancelarán las próximas actividades pendientes de esta serie. Las completadas se conservan.") }, confirmButton = {
-            TextButton(onClick = { vm.perform { vm.repository.stopSeries(id); vm.message("Repetición detenida") }; stopId = null }) { Text("Detener") }
+        stopId?.let { id -> AlertDialog(onDismissRequest = { stopId = null }, title = { Text(if (stopFromBase) "¿Eliminar bloque semanal?" else "¿Detener la serie?") }, text = { Text(if (stopFromBase) "Se retirará del horario base en todos sus días y se cancelarán las próximas actividades pendientes de esta serie. Las completadas y el historial se conservan." else "Se cancelarán las próximas actividades pendientes de esta serie. Las completadas se conservan.") }, confirmButton = {
+            TextButton(onClick = { vm.perform { vm.repository.stopSeries(id); vm.message("Repetición detenida") }; stopId = null }) { Text(if (stopFromBase) "Eliminar" else "Detener") }
         }, dismissButton = { TextButton(onClick = { stopId = null }) { Text("Cancelar") } }) }
     }
 }

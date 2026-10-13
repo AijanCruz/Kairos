@@ -181,6 +181,27 @@ class RepositoryTest {
         assertEquals(repo.activities.first().size, repo.activities.first().map { it.occurrence.originalDay }.distinct().size)
     }
 
+    @Test fun weeklyBaseSurvivesOccurrenceChangesAndKeepsOneOffSeparate() = runBlocking {
+        val oneOff = create()
+        val today = LocalDate.now().toEpochDay()
+        val id = repo.saveSchedule(Schedule(title = "Horario base", category = Categories.UNIVERSITY, startDay = today, startMinute = 480, durationMinutes = 60, repeat = "WEEKLY", weekdays = "1,3"))
+        val original = repo.recurringSchedules.first().single()
+        val items = repo.dao.seriesOccurrences(id).sortedBy { it.day }
+        repo.complete(items[0].id)
+        repo.cancel(items[1].id)
+        repo.move(items[2].id, today + 400, 600)
+        repo.generateRange(today + 390, today + 410)
+        assertEquals(listOf(original), repo.recurringSchedules.first())
+        val replacement = repo.saveSchedule(original.copy(title = "Base editada", startMinute = 540))
+        assertEquals(replacement, repo.recurringSchedules.first().single().id)
+        assertEquals(Status.DONE, repo.dao.occurrence(items[0].id)!!.status)
+        assertTrue(repo.dao.occurrence(items[2].id)!!.moved)
+        repo.stopSeries(replacement)
+        assertTrue(repo.recurringSchedules.first().isEmpty())
+        assertEquals(oneOff, repo.dao.activity(oneOff.occurrence.id))
+        assertEquals(Status.DONE, repo.dao.occurrence(items[0].id)!!.status)
+    }
+
     @Test fun editingOneMovedOccurrencePreservesHistoryWithoutRegeneration() = runBlocking {
         val today = LocalDate.now().toEpochDay()
         repo.saveSchedule(Schedule(title = "Rutina original", category = Categories.WORKOUT, startDay = today, startMinute = 900, durationMinutes = 50, repeat = "DAILY"))

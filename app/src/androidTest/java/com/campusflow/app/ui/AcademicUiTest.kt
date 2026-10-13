@@ -43,7 +43,8 @@ class AcademicUiTest {
         awaitText("Modo enfoque")
         scrollTo("Evaluaciones de $subjectName")
         compose.onNodeWithText("Evaluaciones de $subjectName").performClick()
-        awaitText("+ Evaluación")
+        awaitText("Evaluaciones")
+        scrollTo("+ Evaluación")
     }
 
     @Test fun createExamRecreateDraftAddTopicPrepareAndCompleteFromHome() {
@@ -112,5 +113,67 @@ class AcademicUiTest {
         assertEquals(40 * 60_000L, app.repository.dao.timer()!!.totalMillis)
         StudyRepository(app.repository).discard()
         assertEquals(Status.PENDING, app.repository.dao.occurrence(created.occurrence.id)!!.status)
+    }
+    @Test fun quizGradesUpdateSubjectSummaryAndBlankGradeIsNotZero() = runBlocking {
+        val academic = AcademicRepository(app.database)
+        val id = academic.saveEvaluation(AcademicEvaluation(subjectId = subjectId, title = "Quiz con nota", type = "QUIZ", date = LocalDate.now().toEpochDay()))
+        academic.saveTopic(ExamTopic(evaluationId = id, name = "Funciones"))
+        openSubject()
+        scrollTo("Quiz con nota")
+        compose.onNodeWithText("Quiz con nota").performClick()
+        compose.onNodeWithText("Temas del quiz").assertExists()
+
+        fun editNumbers(percentage: String, grade: String) {
+            scrollTo("Quiz con nota")
+            compose.onNodeWithContentDescription("Editar evaluación").performScrollTo().performClick()
+            compose.onNodeWithText("Porcentaje de la materia (%)").performScrollTo().performTextReplacement(percentage)
+            compose.onNodeWithText("Nota obtenida (0–100)").performScrollTo().performTextReplacement(grade)
+            compose.onNodeWithText("Guardar", useUnmergedTree = true).performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Guardar").fetchSemanticsNodes().isEmpty() }
+        }
+
+        editNumbers("20", "80,5")
+        scrollTo("Puntos acumulados: 16,1 / 100")
+        compose.onNodeWithText("Promedio ponderado: 80,5 / 100").assertExists()
+        compose.onNodeWithText("Porcentaje pendiente: 80 %").assertExists()
+        editNumbers("40", "90")
+        scrollTo("Puntos acumulados: 36 / 100")
+        compose.onNodeWithText("Promedio ponderado: 90 / 100").assertExists()
+        compose.onNodeWithText("Porcentaje pendiente: 60 %").assertExists()
+        editNumbers("40", "")
+        scrollTo("Puntos acumulados: 0 / 100")
+        compose.onNodeWithText("Promedio ponderado: Sin calificaciones con peso").assertExists()
+        compose.onNodeWithText("Porcentaje pendiente: 100 %").assertExists()
+        val stored = app.database.academicDao().evaluation(id)!!
+        assertNull(stored.evaluation.grade)
+        assertEquals("Funciones", stored.topics.single().name)
+        assertEquals("PENDIENTE", stored.topics.single().status)
+    }
+    @Test fun subjectGoalPersistsAndUpdatesWithGradesAndTopicSummary() = runBlocking {
+        val academic = AcademicRepository(app.database)
+        val id = academic.saveEvaluation(AcademicEvaluation(subjectId = subjectId, title = "Examen meta", date = LocalDate.now().toEpochDay(), percentage = 40.0, grade = 80.0))
+        val quiz = academic.saveEvaluation(AcademicEvaluation(subjectId = subjectId, title = "Quiz meta", type = "QUIZ", date = LocalDate.now().plusDays(1).toEpochDay(), percentage = 60.0))
+        TopicStatus.entries.forEach { academic.saveTopic(ExamTopic(evaluationId = quiz, name = it.label, status = it.name)) }
+        openSubject()
+        scrollTo("Establecer meta final")
+        compose.onNodeWithText("Establecer meta final").performClick()
+        compose.onNodeWithText("Nota objetivo (0–100)").performTextInput("80")
+        compose.onNodeWithText("Guardar meta").performClick()
+        awaitText("Meta alcanzable")
+        compose.onNodeWithText("Necesitas un promedio de 80 / 100 en el 60 % restante.").assertExists()
+        compose.onNodeWithText("Pendientes: 1 · Practicando: 1 · Dominados: 1").assertExists()
+        compose.activityRule.scenario.recreate()
+        awaitText("Meta final: 80 / 100")
+        assertEquals(80.0, AcademicRepository(app.database).goals.first().first { it.subjectId == subjectId }.targetGrade, 0.0)
+        val evaluation = app.database.academicDao().evaluation(id)!!.evaluation
+        academic.saveEvaluation(evaluation.copy(grade = 20.0))
+        awaitText("Meta matemáticamente imposible")
+        academic.saveGoal(subjectId, 5.0)
+        awaitText("Meta asegurada")
+        compose.onNodeWithText("Meta final: 5 / 100").performScrollTo().performClick()
+        compose.onNodeWithText("Nota objetivo (0–100)").performTextReplacement("")
+        compose.onNodeWithText("Guardar meta").performClick()
+        awaitText("Establecer meta final")
+        assertTrue(academic.goals.first().none { it.subjectId == subjectId })
     }
 }
