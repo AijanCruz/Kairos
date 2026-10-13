@@ -1,5 +1,68 @@
 # Kairos — registro de desarrollo
 
+## Ampliación académica — porcentajes, notas y temas de quizzes
+
+- Se amplió AcademicEvaluation existente con porcentaje y nota nullable de 0–100.
+  Migración Room **3 → 4** con dos ALTER TABLE; porcentaje inicial 0 y nota NULL
+  para conservar datos sin inventar pesos/notas. Ruta completa 1 → 4 verificada.
+- Editor existente con ambos campos, decimales con coma/punto y aporte calculado.
+  AcademicScreen muestra puntos acumulados, promedio ponderado solo de las
+  evaluaciones con nota/peso y porcentaje pendiente (incluye el no asignado).
+  EvaluationRow muestra nota/peso/aporte en la gestión de la materia.
+- Límite de 100 % por materia validado transaccionalmente al insertar/editar,
+  excluyendo la fila actual. Cálculos decimales; notas ausentes no son ceros.
+- QUIZ reutiliza ExamTopic, controles, estados, preparación y sugerencias.
+  Se puede alternar EXAMEN ↔ QUIZ conservando todos los temas y estados.
+- Cambios localizados en AcademicEntities, AcademicDao, AcademicRepository,
+  CampusDatabase, AcademicRules, AcademicScreen, EvaluationEditor y EvaluationRow;
+  esquema exportado `app/schemas/com.campusflow.app.data.CampusDatabase/4.json`.
+  Sin cambios en horario, actividades, navegación, branding ni otras funciones.
+
+Verificación:
+- Build debug correcto.
+- **17 tests JVM aprobados:** AcademicRulesTest (9), AcademicGradingTest (8).
+- **18 tests Android aprobados** en emulador API 35: AcademicRepositoryTest (10),
+  MigrationTest (5), AcademicUiTest (3). Cobertura de límite concurrente, pesos
+  decimales, conservación de temas, migración, edición/limpieza de notas y UI reactiva.
+- Lint: 0 errores, 19 avisos preexistentes de dependencias/recursos del launcher.
+- Una ejecución fue interrumpida por el usuario; la reejecución terminó correcta.
+
+APK: `dist/Kairos-1.0.0-debug.apk`, idéntico a `app/build/outputs/apk/debug/app-debug.apk`.
+SHA-256: `4c473fdc909c5092b82b1635dfc9d693e4a80cda26e44cd8967ac80ae2ccf716`.
+
+---
+
+## Horario semanal permanente — completado
+
+- Cuadrícula lunes–domingo, 00:00–24:00, desplazamiento horizontal/vertical,
+  colores Material 3, bloques solapados en columnas y continuación al día siguiente.
+- Base obtenida de las reglas activas DAILY/WEEKLY, independiente de fechas,
+  horizonte de ocurrencias y estado de completado. Inicio/fin de las reglas siguen
+  limitando sus ocurrencias reales; la plantilla no desaparece por cambiar de fecha.
+- Alta desde una hora libre, edición mediante ActivityEditor y retirada usando
+  stopSeries con confirmación. Conserva las ocurrencias históricas y sus datos.
+- Agenda por fecha con Día/7 días, separando puntuales/excepciones de recurrentes.
+  Las evaluaciones académicas permanecen en su flujo actual y nunca van a la cuadrícula.
+- Room v3 sin cambios de esquema, sin migración ni dependencias nuevas.
+  Launcher, branding, entrenamientos y funciones académicas sin modificaciones.
+
+Archivos: CampusDao, CampusRepository, AppViewModel, CampusRoot, ScheduleScreen,
+ActivityEditor; nuevos WeeklyTimetable, WeeklyTimetableGrid y ScheduleBlockDetails.
+Tests: WeeklyTimetableTest, TimetableUiTest, RepositoryTest y ajuste de AppUiTest
+para seleccionar Agenda antes de comprobar los días con fecha.
+
+Verificación: assembleDebug correcto; **13 tests JVM** (WeeklyTimetableTest y
+CalendarRulesTest) y **19 tests Android** (RepositoryTest, TimetableUiTest y
+AppUiTest) aprobados en API 35. Lint: **0 errores, 19 avisos** de dependencias y
+recursos del launcher ya existentes, fuera de este alcance.
+El primer intento Android no inició tests por un ANR durante el arranque del
+emulador bajo presión de memoria/CPU; la repetición con el arranque terminado
+completó los 19 tests sin fallos.
+
+APK actualizado: `dist/Kairos-1.0.0-debug.apk`.
+
+---
+
 ## Capa académica sencilla — entrega completada
 
 Implementada según el nuevo alcance limitado del usuario; no se rediseñó Inicio

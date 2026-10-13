@@ -29,6 +29,11 @@ import androidx.compose.ui.semantics.semantics
 fun SettingsScreen(vm: AppViewModel, preferences: UserPreferences, onBack: () -> Unit) {
     var importUri by rememberSaveable { mutableStateOf<String?>(null) }
     var clearDialog by rememberSaveable { mutableStateOf(false) }
+    var profileDialog by rememberSaveable { mutableStateOf(false) }
+    val profileSaving by vm.profileSaving.collectAsStateWithLifecycle()
+    val profileError by vm.profileError.collectAsStateWithLifecycle()
+    if (profileDialog) ProfileDialog(preferences.displayName, false, profileSaving, profileError,
+        { name -> vm.saveProfile(name) { profileDialog = false } }, { profileDialog = false })
     val dataBusy by vm.dataBusy.collectAsStateWithLifecycle()
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri?.let(vm::exportData)
@@ -38,6 +43,14 @@ fun SettingsScreen(vm: AppViewModel, preferences: UserPreferences, onBack: () ->
         item {
             TextButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null); Text("Volver") }
             PageHeading("A tu manera", "Pequeños ajustes para tu día a día.")
+        }
+        item { SectionLabel("PERFIL LOCAL") }
+        item {
+            SettingsCard {
+                Text(preferences.displayName.ifBlank { "Tu espacio, a tu ritmo" }, style = MaterialTheme.typography.titleLarge)
+                Text(if (preferences.displayName.isBlank()) "Estás usando un saludo genérico." else "Este nombre aparece en tu bienvenida.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedButton(enabled = preferences.loaded, onClick = { vm.profileError.value = null; profileDialog = true }) { Text("Editar nombre") }
+            }
         }
         item { SectionLabel("APARIENCIA") }
         item {
@@ -97,7 +110,5 @@ fun SettingsScreen(vm: AppViewModel, preferences: UserPreferences, onBack: () ->
 
 @Composable
 private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest, shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
-    }
+    KairosCard(content = content)
 }

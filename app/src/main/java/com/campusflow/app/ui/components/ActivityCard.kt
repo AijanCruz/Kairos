@@ -2,6 +2,7 @@ package com.campusflow.app.ui.components
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.*
@@ -13,31 +14,27 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.campusflow.app.data.*
 import com.campusflow.app.domain.clock
+import com.campusflow.app.ui.theme.categoryColors
 
 @Composable
 fun ActivityCard(item: ActivityItem, onOpen: () -> Unit, onComplete: () -> Unit) {
     val schedule = item.schedule
     val occurrence = item.occurrence
     val done = occurrence.status == Status.DONE
-    val color = when (schedule.category) {
-        Categories.UNIVERSITY -> MaterialTheme.colorScheme.secondaryContainer
-        Categories.WORKOUT -> MaterialTheme.colorScheme.tertiaryContainer
-        Categories.STUDY -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surfaceContainerHigh
-    }
+    val colors = categoryColors(schedule.category)
     val icon = when (schedule.category) {
         Categories.UNIVERSITY -> Icons.Outlined.School
         Categories.WORKOUT -> Icons.Outlined.FitnessCenter
         Categories.STUDY -> Icons.AutoMirrored.Outlined.MenuBook
         else -> Icons.Outlined.Event
     }
-    Card(onClick = onOpen, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest), modifier = Modifier.fillMaxWidth().animateContentSize()) {
+    Card(onClick = onOpen, shape = MaterialTheme.shapes.medium, border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.22f)), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest), modifier = Modifier.fillMaxWidth().animateContentSize()) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Surface(color = color, shape = MaterialTheme.shapes.small) { Icon(icon, null, Modifier.padding(12.dp).size(23.dp)) }
+            IconBadge(icon, colors.accent)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(schedule.title, style = MaterialTheme.typography.titleMedium, textDecoration = if (done) TextDecoration.LineThrough else null)
                 Text("${Categories.label(schedule.category)} · ${schedule.durationMinutes} min", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("${occurrence.minute.clock()} – ${((occurrence.minute + schedule.durationMinutes) % 1440).clock()}${if (occurrence.minute + schedule.durationMinutes >= 1440) " (+1 día)" else ""}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text("${occurrence.minute.clock()} – ${((occurrence.minute + schedule.durationMinutes) % 1440).clock()}${if (occurrence.minute + schedule.durationMinutes >= 1440) " (+1 día)" else ""}", style = MaterialTheme.typography.labelLarge, color = colors.accent)
                 if (occurrence.moved) Text("↪ Pospuesta", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
             }
             IconButton(onClick = onComplete, enabled = !done) {

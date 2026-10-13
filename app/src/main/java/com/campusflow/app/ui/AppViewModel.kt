@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.campusflow.app.data.*
 
@@ -39,9 +41,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val dataBusy: kotlinx.coroutines.flow.StateFlow<Boolean> = _dataBusy
     private val backup = DataBackup(container.database)
     val notificationTarget = kotlinx.coroutines.flow.MutableStateFlow<Long?>(null)
-    val now = kotlinx.coroutines.flow.flow {
-        while (true) { emit(java.time.LocalDateTime.now()); kotlinx.coroutines.delay(15_000) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), java.time.LocalDateTime.now())
+    val profileSaving = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val profileError = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    private val clockRefresh = Channel<Unit>(Channel.CONFLATED)
+    val now = merge(kotlinx.coroutines.flow.flow {
+        while (true) { emit(Unit); kotlinx.coroutines.delay(15_000) }
+    }, clockRefresh.receiveAsFlow()).map { java.time.LocalDateTime.now() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), java.time.LocalDateTime.now())
+    fun refreshClock() { clockRefresh.trySend(Unit) }
+    fun saveProfile(name: String, onSaved: () -> Unit = {}) {
+        if (!profileSaving.compareAndSet(false, true)) return
+        profileError.value = null
+        viewModelScope.launch {
+            try { container.preferences.setProfile(name); onSaved() }
+            catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (error: Exception) { profileError.value = error.message ?: "No se pudo guardar el nombre." }
+            finally { profileSaving.value = false }
+        }
+    }
     init { perform { repository.initialize() } }
     fun perform(block: suspend () -> Unit) {
         viewModelScope.launch {
