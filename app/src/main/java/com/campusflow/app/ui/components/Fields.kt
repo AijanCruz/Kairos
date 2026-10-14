@@ -9,15 +9,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.Color
 import com.campusflow.app.domain.clock
 import com.campusflow.app.domain.pretty
 import java.time.*
 
 @Composable
-fun <T> ChoiceField(label: String, value: T, options: List<T>, text: (T) -> String, enabled: Boolean = true, onSelect: (T) -> Unit) {
+fun <T> ChoiceField(label: String, value: T, options: List<T>, text: (T) -> String, enabled: Boolean = true, accent: Color? = null, onSelect: (T) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxWidth()) {
-        PickerField(label, text(value), Icons.Outlined.ExpandMore, enabled) { expanded = true }
+        PickerField(label, text(value), Icons.Outlined.ExpandMore, enabled, accent) { expanded = true }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option -> DropdownMenuItem(text = { Text(text(option)) }, onClick = { onSelect(option); expanded = false }) }
         }
@@ -54,15 +56,16 @@ fun TimeField(minute: Int, label: String = "Hora", enabled: Boolean = true, onCh
 }
 
 @Composable
-private fun PickerField(label: String, value: String, icon: ImageVector, enabled: Boolean, onClick: () -> Unit) {
+private fun PickerField(label: String, value: String, icon: ImageVector, enabled: Boolean, accent: Color? = null, onClick: () -> Unit) {
     OutlinedCard(onClick = onClick, enabled = enabled, shape = MaterialTheme.shapes.small,
+        border = BorderStroke(1.dp, accent?.copy(alpha = .4f) ?: MaterialTheme.colorScheme.outlineVariant),
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(value, style = MaterialTheme.typography.bodyLarge)
+                Text(value, style = MaterialTheme.typography.bodyLarge, color = accent ?: MaterialTheme.colorScheme.onSurface)
             }
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+            Icon(icon, null, tint = accent ?: MaterialTheme.colorScheme.primary)
         }
     }
 }

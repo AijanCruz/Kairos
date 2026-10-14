@@ -9,13 +9,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.campusflow.app.data.*
 import com.campusflow.app.domain.*
+import com.campusflow.app.ui.components.IconBadge
+import com.campusflow.app.ui.theme.categoryColors
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Event
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityDetails(item: ActivityItem, history: List<RescheduleHistory>, onClose: () -> Unit, onEdit: () -> Unit, onEditSeries: () -> Unit, onDelete: () -> Unit, onComplete: () -> Unit, onStopSeries: () -> Unit, onMove: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(Categories.label(item.schedule.category).uppercase(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            IconBadge(Icons.Outlined.Event, categoryColors(item.schedule.category).accent)
+            Text(Categories.label(item.schedule.category).uppercase(), style = MaterialTheme.typography.labelLarge, color = categoryColors(item.schedule.category).accent)
             Text(item.schedule.title, style = MaterialTheme.typography.headlineMedium)
             Text(item.occurrence.day.asDate().pretty())
             Text("${item.occurrence.minute.clock()} · ${item.schedule.durationMinutes} min")

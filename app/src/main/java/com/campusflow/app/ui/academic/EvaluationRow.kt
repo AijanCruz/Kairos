@@ -15,19 +15,24 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.campusflow.app.data.*
 import com.campusflow.app.domain.*
+import com.campusflow.app.ui.theme.preparationColor
+import com.campusflow.app.ui.theme.subjectAccent
+import com.campusflow.app.ui.components.IconBadge
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Assignment
+import androidx.compose.material.icons.outlined.Quiz
 
 @Composable
 fun EvaluationRow(item: EvaluationWithTopics, today: Long, showGrades: Boolean = false, onOpen: () -> Unit) {
     val evaluation = item.evaluation
     val prepared = AcademicRules.prepared(item)
     val urgency = AcademicRules.urgency(evaluation.date, today)
-    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val green = if (dark) Color(0xFFA4D0B6) else Color(0xFF3D6655)
+    val green = preparationColor("GREEN")
     val accent = when {
         evaluation.completed -> MaterialTheme.colorScheme.outline
         prepared -> green
         urgency == AcademicUrgency.GREEN -> green
-        urgency == AcademicUrgency.YELLOW -> if (dark) Color(0xFFE4C76B) else Color(0xFF8A6A16)
+        urgency == AcademicUrgency.YELLOW -> preparationColor("YELLOW")
         else -> MaterialTheme.colorScheme.error
     }
     val state = when {
@@ -52,6 +57,7 @@ fun EvaluationRow(item: EvaluationWithTopics, today: Long, showGrades: Boolean =
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(8.dp).background(accent, CircleShape))
+        IconBadge(if (AcademicRules.supportsTopics(evaluation.type)) Icons.Outlined.Quiz else Icons.Outlined.Assignment, subjectAccent(evaluation.subjectId))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(evaluation.title, style = MaterialTheme.typography.titleMedium)
             Text("${item.subject.name} · ${EvaluationType.valueOf(evaluation.type).label}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

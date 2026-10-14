@@ -21,6 +21,11 @@ class TimetableUiTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private val app get() = compose.activity.application as CampusApp
     private val owned = mutableSetOf<Long>()
+    private lateinit var oldProfile: UserPreferences
+    @Before fun prepare() = runBlocking {
+        oldProfile = app.preferences.flow.first()
+        if (!oldProfile.welcomeCompleted) app.preferences.setProfile(oldProfile.displayName)
+    }
     @After fun clean() = runBlocking {
         val application = app
         owned.forEach { application.repository.stopSeries(it) }
@@ -28,6 +33,7 @@ class TimetableUiTest {
         withContext(Dispatchers.IO) {
             owned.forEach { application.database.openHelper.writableDatabase.execSQL("DELETE FROM schedules WHERE id = ?", arrayOf(it)) }
         }
+        application.preferences.setProfile(oldProfile.displayName, oldProfile.welcomeCompleted)
     }
     private fun awaitRule(title: String): Schedule {
         var value: Schedule? = null

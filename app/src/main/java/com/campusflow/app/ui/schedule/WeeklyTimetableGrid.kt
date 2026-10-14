@@ -28,8 +28,10 @@ import java.time.DayOfWeek
 import java.time.LocalDateTime
 import java.time.format.TextStyle
 import kotlinx.coroutines.launch
+import com.campusflow.app.ui.theme.categoryColors
+import androidx.compose.foundation.BorderStroke
 
-private val HourHeight = 96.dp
+private val HourHeight = 72.dp
 private val TimeWidth = 48.dp
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -83,7 +85,7 @@ fun WeeklyTimetableGrid(schedules: List<Schedule>, onOpen: (Schedule) -> Unit, o
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                listOf(Triple(Icons.Outlined.School, "Clases", MaterialTheme.colorScheme.secondary), Triple(Icons.AutoMirrored.Outlined.MenuBook, "Estudio", MaterialTheme.colorScheme.primary), Triple(Icons.Outlined.FitnessCenter, "Entreno", MaterialTheme.colorScheme.tertiary)).forEach { (icon, label, color) ->
+                listOf(Triple(Icons.Outlined.School, "Clases", categoryColors(Categories.UNIVERSITY).accent), Triple(Icons.AutoMirrored.Outlined.MenuBook, "Estudio", categoryColors(Categories.STUDY).accent), Triple(Icons.Outlined.FitnessCenter, "Entreno", categoryColors(Categories.WORKOUT).accent)).forEach { (icon, label, color) ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Icon(icon, null, Modifier.size(14.dp), tint = color)
                         Text(label, style = MaterialTheme.typography.labelSmall)
@@ -126,18 +128,14 @@ fun WeeklyTimetableGrid(schedules: List<Schedule>, onOpen: (Schedule) -> Unit, o
                                     .clickable(onClickLabel = "Agregar bloque semanal") { onAdd(day, hour * 60) })
                             }
                             blocks.filter { it.weekday == day }.forEach { block ->
-                                val (color, contentColor) = when (block.schedule.category) {
-                                    Categories.UNIVERSITY -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-                                    Categories.STUDY -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-                                    Categories.WORKOUT -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-                                    else -> MaterialTheme.colorScheme.surfaceContainerHigh to MaterialTheme.colorScheme.onSurface
-                                }
+                                val palette = categoryColors(block.schedule.category)
                                 val time = "${block.startMinute.clock()}–${block.endMinute.clock()}"
                                 val description = "${block.schedule.title}, ${Categories.label(block.schedule.category)}, $dayName, $time${if (block.continuation) ", continúa del día anterior" else ""}"
                                 val blockHeight = (axis.offset(block.endMinute) - axis.offset(block.startMinute) - 2f).dp
                                 CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                                     Surface(
-                                        onClick = { onOpen(block.schedule) }, color = color, contentColor = contentColor,
+                                        onClick = { onOpen(block.schedule) }, color = palette.container, contentColor = palette.content,
+                                        border = BorderStroke(1.dp, palette.accent.copy(alpha = .5f)),
                                         shape = MaterialTheme.shapes.extraSmall,
                                         modifier = Modifier.offset(x = width / block.lanes * block.lane + 2.dp, y = axis.offset(block.startMinute).dp)
                                             .width(width / block.lanes - 4.dp)
@@ -152,7 +150,7 @@ fun WeeklyTimetableGrid(schedules: List<Schedule>, onOpen: (Schedule) -> Unit, o
                                                     Categories.STUDY -> Icons.AutoMirrored.Outlined.MenuBook
                                                     Categories.WORKOUT -> Icons.Outlined.FitnessCenter
                                                     else -> Icons.Outlined.Event
-                                                }, null, Modifier.size(14.dp))
+                                                }, null, Modifier.size(14.dp), tint = palette.accent)
                                                 Text(block.schedule.title, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, maxLines = if (blockHeight >= 80.dp) 2 else 1, overflow = TextOverflow.Ellipsis)
                                             }
                                             Text(time, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)

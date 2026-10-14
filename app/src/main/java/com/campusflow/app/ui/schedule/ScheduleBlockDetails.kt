@@ -12,13 +12,18 @@ import com.campusflow.app.domain.*
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
+import com.campusflow.app.ui.theme.categoryColors
+import com.campusflow.app.ui.components.IconBadge
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CalendarMonth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleBlockDetails(schedule: Schedule, onClose: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("HORARIO BASE · ${Categories.label(schedule.category)}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            IconBadge(Icons.Outlined.CalendarMonth, categoryColors(schedule.category).accent)
+            Text("HORARIO BASE · ${Categories.label(schedule.category)}", style = MaterialTheme.typography.labelLarge, color = categoryColors(schedule.category).accent)
             Text(schedule.title, style = MaterialTheme.typography.headlineMedium)
             Text(if (schedule.repeat == Repeat.DAILY.name) "Todos los días" else schedule.weekdays.split(',').mapNotNull(String::toIntOrNull).filter { it in 1..7 }.sorted().joinToString(", ") { DayOfWeek.of(it).getDisplayName(TextStyle.FULL, Spanish) })
             val end = schedule.startMinute + schedule.durationMinutes

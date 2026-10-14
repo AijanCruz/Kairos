@@ -24,6 +24,9 @@ import com.campusflow.app.domain.AcademicRules
 import com.campusflow.app.domain.GradeGoalStatus
 import com.campusflow.app.ui.AppViewModel
 import com.campusflow.app.ui.components.*
+import androidx.compose.foundation.BorderStroke
+import com.campusflow.app.ui.theme.subjectAccent
+import com.campusflow.app.ui.theme.preparationColor
 
 @Composable
 fun AcademicScreen(vm: AppViewModel, subjectId: Long, initialEvaluationId: Long, onBack: () -> Unit) {
@@ -59,9 +62,15 @@ fun AcademicScreen(vm: AppViewModel, subjectId: Long, initialEvaluationId: Long,
             PageHeading("Evaluaciones", subject?.name ?: "Materia no disponible")
             if (subject != null) {
                 Spacer(Modifier.height(16.dp))
-                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLowest, border = BorderStroke(1.dp, subjectAccent(subjectId).copy(alpha = .3f))) {
                     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Calificaciones", style = MaterialTheme.typography.titleMedium)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Calificaciones", style = MaterialTheme.typography.titleLarge)
+                                Text("Tu avance en esta materia.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            MetricRing("${AcademicRules.numberLabel(grades.gradedPercentage)}%", "Evaluado", (grades.gradedPercentage / 100).toFloat(), subjectAccent(subjectId))
+                        }
                         Text("Puntos acumulados: ${AcademicRules.numberLabel(grades.accumulatedPoints)} / 100", style = MaterialTheme.typography.bodyLarge)
                         Text("Promedio ponderado: ${grades.weightedAverage?.let { "${AcademicRules.numberLabel(it)} / 100" } ?: "Sin calificaciones con peso"}", style = MaterialTheme.typography.bodyMedium)
                         Text("Porcentaje pendiente: ${AcademicRules.numberLabel(grades.pendingPercentage)} %", style = MaterialTheme.typography.bodyMedium)
@@ -94,7 +103,7 @@ fun AcademicScreen(vm: AppViewModel, subjectId: Long, initialEvaluationId: Long,
         if (evaluations.isEmpty() && subject != null) item { Text("Agrega una fecha de entrega o un examen. Los temas te ayudarán a decidir qué estudiar.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(evaluations, key = { it.evaluation.id }) { item ->
             val evaluation = item.evaluation
-            Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
+            Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLowest, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                 Column {
                     EvaluationRow(item, now.toLocalDate().toEpochDay(), showGrades = true) { expandedId = if (expandedId == evaluation.id) null else evaluation.id }
                     if (expandedId == evaluation.id) Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -116,7 +125,7 @@ fun AcademicScreen(vm: AppViewModel, subjectId: Long, initialEvaluationId: Long,
                                         IconButton(enabled = !saving, onClick = { vm.academicError.value = null; topicEvaluationId = evaluation.id; topicId = topic.id; topicName = topic.name }) { Icon(Icons.Outlined.Edit, "Editar tema ${topic.name}") }
                                         IconButton(enabled = !saving, onClick = { vm.changeAcademic({ vm.academic.deleteTopic(topic.id) }) }) { Icon(Icons.Outlined.DeleteOutline, "Eliminar tema ${topic.name}") }
                                     }
-                                    ChoiceField("Estado de ${topic.name}", topic.status, TopicStatus.entries.map { it.name }, { TopicStatus.valueOf(it).label }, enabled = !saving) { status ->
+                                    ChoiceField("Estado de ${topic.name}", topic.status, TopicStatus.entries.map { it.name }, { TopicStatus.valueOf(it).label }, enabled = !saving, accent = preparationColor(topic.status)) { status ->
                                         vm.changeAcademic({ vm.academic.setTopicStatus(topic.id, status) })
                                     }
                                 }

@@ -1,5 +1,23 @@
 # Primeros pasos
 
+## Tu perfil y el nuevo diseño
+
+Al abrir Kairos por primera vez con esta versión se pregunta **¿Cómo te llamás?**.
+Introduce tu nombre preferido y pulsa **Empezar**, o **Ahora no** para usar un
+saludo genérico. Ambas opciones guardan la elección y evitan repetir la bienvenida.
+El nombre es local, sin cuenta ni conexión. Puedes cambiarlo o quitarlo desde
+**Configuración → Perfil local → Editar nombre**.
+
+Inicio adapta el saludo a la hora local y actualiza la fecha al volver. Las tarjetas
+de clases, entregas, estudio y entrenamiento abren sus secciones. Las barras
+académicas muestran los promedios ponderados existentes de cada materia; toca una
+barra para consultar puntos acumulados, evaluaciones y metas. No se inventan datos
+cuando una materia aún no tiene notas.
+
+El nuevo estilo oscuro usa azul marino y acentos por categoría. El modo claro,
+seguir sistema y los colores dinámicos siguen disponibles; el botón de sol/luna
+del encabezado alterna directamente claro y oscuro.
+
 ## Instalar en tu Galaxy A55
 
 1. Copia `app/build/outputs/apk/debug/app-debug.apk` al teléfono y ábrelo.

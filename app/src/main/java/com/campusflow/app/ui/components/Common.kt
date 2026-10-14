@@ -65,7 +65,7 @@ fun MetricRing(value: String, label: String, progress: Float?, color: Color, mod
         CircularProgressIndicator(progress = { progress?.coerceIn(0f, 1f) ?: 0f }, modifier = Modifier.fillMaxSize(), color = color,
             strokeWidth = 7.dp, trackColor = MaterialTheme.colorScheme.surfaceContainerHigh)
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(14.dp)) {
-            Text(value, style = MaterialTheme.typography.titleLarge)
+            Text(value, style = if (value.length > 4) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge, maxLines = 1)
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

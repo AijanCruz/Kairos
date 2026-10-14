@@ -18,32 +18,38 @@ import com.campusflow.app.domain.*
 import com.campusflow.app.ui.components.*
 import java.time.LocalDateTime
 import com.campusflow.app.ui.academic.EvaluationRow
+import com.campusflow.app.ui.theme.categoryColors
 
 @Composable
-fun DashboardScreen(activities: List<ActivityItem>, now: LocalDateTime, remindersReady: Boolean, onOpen: (ActivityItem) -> Unit, onComplete: (ActivityItem) -> Unit, onAdd: () -> Unit, onReminders: () -> Unit, evaluations: List<EvaluationWithTopics>, onEvaluation: (EvaluationWithTopics) -> Unit) {
+fun DashboardScreen(activities: List<ActivityItem>, now: LocalDateTime, remindersReady: Boolean, onOpen: (ActivityItem) -> Unit, onComplete: (ActivityItem) -> Unit, onAdd: () -> Unit, onReminders: () -> Unit, evaluations: List<EvaluationWithTopics>, onEvaluation: (EvaluationWithTopics) -> Unit, displayName: String, subjects: List<Subject>, studyRecords: List<StudyRecord>, onSchedule: () -> Unit, onStudy: () -> Unit, onWorkout: () -> Unit, onSubject: (Subject) -> Unit) {
     val today = now.toLocalDate()
     val daily = activities.filter { it.occurrence.day == today.toEpochDay() }
-    val pending = daily.filter { it.occurrence.status == Status.PENDING }
-    val overdue = activities.filter { it.occurrence.day < today.toEpochDay() && it.occurrence.status == Status.PENDING }
     val weekStart = CalendarRules.weekStart(today).toEpochDay()
     val weekly = activities.filter { it.occurrence.day in weekStart..weekStart + 6 }
     val upcoming = remember(evaluations, today) { AcademicRules.upcoming(evaluations, today.toEpochDay()).take(3) }
+    val next = remember(activities, now) {
+        val stamp = now.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        activities.filter { it.occurrence.status == Status.PENDING && CalendarRules.instant(it.occurrence.day, it.occurrence.minute) + it.schedule.durationMinutes * 60_000L > stamp }.take(3)
+    }
+    val nextIds = next.map { it.occurrence.id }.toSet()
+    val overdue = activities.filter { it.occurrence.day < today.toEpochDay() && it.occurrence.status == Status.PENDING && it.occurrence.id !in nextIds }
+    val studyMinutes = remember(studyRecords, today) { studyRecords.filter { java.time.Instant.ofEpochMilli(it.completedAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate() == today }.sumOf { it.seconds } / 60 }
     var showOverdue by rememberSaveable { mutableStateOf(false) }
-    val greeting = when (now.hour) { in 5..11 -> "Buenos días"; in 12..19 -> "Buenas tardes"; else -> "Buenas noches" }
     LazyColumn(contentPadding = PaddingValues(20.dp, 12.dp, 20.dp, 100.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        item { PageHeading(greeting, today.pretty().replaceFirstChar(Char::uppercase)) }
-        item {
-            Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("UN DÍA A LA VEZ", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    Text(if (pending.isEmpty()) "Respira.\nHoy tienes espacio." else "Tus planes,\na tu ritmo.", style = MaterialTheme.typography.headlineMedium)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (pending.isEmpty()) "Todo listo por hoy 🎉" else "${pending.size} ${if (pending.size == 1) "actividad pendiente" else "actividades pendientes"}", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        IconButton(onClick = onAdd) { Icon(Icons.Outlined.ArrowOutward, "Planificar actividad") }
-                    }
-                }
+        item { WelcomeCard(now, displayName, onAdd) }
+        item { HomeSummary(daily.count { it.schedule.category == Categories.UNIVERSITY }, evaluations.count { !it.evaluation.completed && it.evaluation.type in setOf("TAREA", "PROYECTO", "EXPOSICION") }, studyMinutes, daily.count { it.schedule.category == Categories.WORKOUT }, onSchedule, onStudy, onWorkout) }
+        item { Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Próximas actividades", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = onSchedule) { Text("Ver horario") }
+        } }
+        if (next.isEmpty()) item { Text("Sin próximas actividades programadas.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        items(next, key = { it.occurrence.id }) { item ->
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (item.occurrence.day != today.toEpochDay()) Text(item.occurrence.day.asDate().pretty(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ActivityCard(item, { onOpen(item) }, { onComplete(item) })
             }
         }
+        item { HomeAcademicOverview(subjects, evaluations, onStudy, onSubject) }
         if (upcoming.isNotEmpty()) item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Próximas evaluaciones", style = MaterialTheme.typography.titleMedium)
@@ -58,8 +64,8 @@ fun DashboardScreen(activities: List<ActivityItem>, now: LocalDateTime, reminder
             }
         }
         item { SectionLabel("HOY", "${daily.count { it.occurrence.status == Status.DONE }} / ${daily.size} completadas") }
-        if (daily.isEmpty()) item { EmptyState("Tu agenda empieza contigo", "Toca + para agregar tu primera clase, sesión o entrenamiento.") }
-        items(daily, key = { it.occurrence.id }) { item -> ActivityCard(item, { onOpen(item) }, { onComplete(item) }) }
+        if (daily.isEmpty()) item { EmptyState("Hoy tenés espacio", "No hay actividades programadas para hoy. Podés planificar desde +.") }
+        items(daily.filterNot { it.occurrence.id in nextIds }, key = { it.occurrence.id }) { item -> ActivityCard(item, { onOpen(item) }, { onComplete(item) }) }
         if (!remindersReady && activities.any { it.schedule.reminderMinutes >= 0 && it.occurrence.status == Status.PENDING }) item {
             OutlinedCard(onClick = onReminders, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -90,6 +96,7 @@ fun DashboardScreen(activities: List<ActivityItem>, now: LocalDateTime, reminder
             Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest, shape = MaterialTheme.shapes.medium) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                     listOf(Categories.STUDY to "Estudio", Categories.WORKOUT to "Entrenamientos").forEach { (category, label) ->
+                        val accent = categoryColors(category).accent
                         val entries = weekly.filter { it.schedule.category == category }
                         val completed = activities.count {
                             it.schedule.category == category && it.occurrence.status == Status.DONE && it.occurrence.completedAt?.let { stamp ->
@@ -100,9 +107,9 @@ fun DashboardScreen(activities: List<ActivityItem>, now: LocalDateTime, reminder
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text(label, style = MaterialTheme.typography.bodyMedium)
-                                Text("$completed / $total", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                Text("$completed / $total", style = MaterialTheme.typography.labelLarge, color = accent)
                             }
-                            LinearProgressIndicator(progress = { if (total == 0) 0f else completed.toFloat() / total }, modifier = Modifier.fillMaxWidth(), gapSize = 0.dp, drawStopIndicator = {})
+                            LinearProgressIndicator(progress = { if (total == 0) 0f else completed.toFloat() / total }, modifier = Modifier.fillMaxWidth(), color = accent, trackColor = MaterialTheme.colorScheme.surfaceContainerHigh, gapSize = 0.dp, drawStopIndicator = {})
                         }
                     }
                 }

@@ -22,7 +22,12 @@ class AcademicUiTest {
     private var subjectId = 0L
     private val subjectName = "Cálculo UI ${System.nanoTime()}"
     private val ownedSchedules = mutableSetOf<Long>()
-    @Before fun prepare() = runBlocking { subjectId = app.repository.addSubject(subjectName) }
+    private lateinit var oldProfile: UserPreferences
+    @Before fun prepare() = runBlocking {
+        oldProfile = app.preferences.flow.first()
+        if (!oldProfile.welcomeCompleted) app.preferences.setProfile(oldProfile.displayName)
+        subjectId = app.repository.addSubject(subjectName)
+    }
     @After fun clean() = runBlocking {
         val application = app
         ownedSchedules.forEach { id -> application.repository.dao.seriesOccurrences(id).forEach { application.repository.cancel(it.id) } }
@@ -31,12 +36,13 @@ class AcademicUiTest {
             ownedSchedules.forEach { application.database.openHelper.writableDatabase.execSQL("DELETE FROM schedules WHERE id = ?", arrayOf(it)) }
         }
         application.repository.dao.deleteSubject(Subject(subjectId, subjectName))
+        application.preferences.setProfile(oldProfile.displayName, oldProfile.welcomeCompleted)
     }
     private fun awaitText(text: String) {
         compose.waitUntil(30_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
     }
     private fun scrollTo(text: String) {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text))
+        compose.onNode(hasScrollAction() and !hasAnyAncestor(hasScrollAction())).performScrollToNode(hasText(text))
     }
     private fun openSubject() {
         compose.onNode(hasText("Estudio") and hasClickAction()).performClick()
@@ -66,7 +72,7 @@ class AcademicUiTest {
         compose.onNodeWithText("Dominado").performClick()
         compose.waitUntil(10_000) { runBlocking { AcademicRepository(app.database).evaluations.first().first { it.evaluation.subjectId == subjectId }.topics.single().status == "DOMINADO" } }
         compose.onNodeWithText("Inicio").performClick()
-        awaitText("Próximas evaluaciones")
+        scrollTo("Próximas evaluaciones")
         scrollTo("Parcial UI")
         compose.onNodeWithText("Hoy · Preparado").assertExists()
         compose.onNodeWithText("Parcial UI").performClick()

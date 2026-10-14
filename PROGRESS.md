@@ -1,5 +1,37 @@
 # Kairos — registro de desarrollo
 
+## Rediseño visual y perfil local
+
+Referencias: `Interfaces_nuevas/Kairos Productivity Dashboard.png` y
+`Kairos_ Neon Academic Planner UI.png`. Paleta azul marino/morada, tarjetas con
+bordes sutiles, iconos y acentos por categoría centralizados en el tema. Se
+mantienen las cuatro pestañas Inicio/Horario/Estudio/Entreno.
+
+- Perfil opcional en DataStore, bienvenida configurable u omitible una sola vez,
+  edición desde Configuración y actualización del reloj al volver a la app.
+- Inicio con saludo local, fecha, resumen diario, accesos funcionales, próximas
+  actividades y gráficas por materia usando AcademicRules. No se inventan notas
+  ni se confunden promedios ponderados con puntos acumulados.
+- Materias/evaluaciones con indicadores, temas con acentos por estado,
+  temporizador circular y rutinas/ejercicios con estilo compartido.
+- Horario y agenda conservan lógica y controles; colores comunes, detalle con
+  iconos y escala visual más compacta. Formularios reutilizan pickers compartidos.
+- Sin cambios al esquema Room 5, los datos de negocio ni el launcher.
+
+Verificación final sin dispositivo: assembleDebug correcto; **54 tests unitarios
+aprobados**, Lint **0 errores y 19 avisos preexistentes**. APK actualizado en
+`dist/Kairos-1.0.0-debug.apk`.
+
+Instrumentación anterior al último ajuste: **11 de 12 tests UI aprobados**,
+incluidos los dos de perfil (guardar/omitir, recrear, editar, refrescar reloj),
+notas/metas, temporizador, navegación y cuadrícula. Un test académico esperaba
+una sección ahora fuera de pantalla: se corrigió para desplazarse hasta ella.
+La repetición final y los ajustes posteriores de tamaño no se verificaron por
+falta de dispositivo; el usuario pidió no repetir instrumentación por ahora.
+Se revisaron capturas de Inicio, resumen académico, materia y horario.
+
+---
+
 ## Ampliación académica — porcentajes, notas y temas de quizzes
 
 - Se amplió AcademicEvaluation existente con porcentaje y nota nullable de 0–100.
