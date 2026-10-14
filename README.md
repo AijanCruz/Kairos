@@ -34,7 +34,7 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1 -Tasks testDebugUnitTest
 
 APK de desarrollo: `app/build/outputs/apk/debug/app-debug.apk`.
 `build.ps1` deja también una copia lista para transferir en
-`dist/CampusFlow-1.0.0-debug.apk` y su huella SHA-256.
+`dist/Kairos-2.4.1-debug.apk` y su huella SHA-256.
 
 Es un APK universal de prueba firmado con la clave de desarrollo, compatible con
 ARM64 (Galaxy A55), ARMv7 y emuladores x86/x86_64. No necesita conexión para

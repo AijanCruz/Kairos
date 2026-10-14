@@ -1,5 +1,14 @@
 # Primeros pasos
 
+Actualización de mantenimiento **2.4.1**: APK `dist/Kairos-2.4.1-debug.apk`.
+La tarjeta **Entregas pendientes → Ver pendientes** abre todas las evaluaciones
+sin completar, incluidas exámenes, quizzes y vencidas, ordenadas por fecha. Toca
+una para abrir su detalle. Tener nota y estar completada son estados independientes.
+Las clases de Inicio corresponden a las ocurrencias universitarias efectivas del
+día, respetando sus fechas tras moverlas y las cancelaciones.
+Reimportar la misma regla OCR revisada no agrega otra serie igual; las clases
+distintas introducidas manualmente se conservan.
+
 ## Tu perfil y el nuevo diseño
 
 Al abrir Kairos por primera vez con esta versión se pregunta **¿Cómo te llamás?**.

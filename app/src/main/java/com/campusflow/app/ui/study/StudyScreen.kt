@@ -122,7 +122,13 @@ fun StudyScreen(vm: AppViewModel, activities: List<ActivityItem>, subjects: List
 @Composable
 private fun StudyTimerCard(timer: StudyTimer, title: String, onStart: () -> Unit, onPause: () -> Unit, onFinish: () -> Unit, onDiscard: () -> Unit) {
     var clock by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(timer) { while (true) { clock = System.currentTimeMillis(); delay(250) } }
+    LaunchedEffect(timer) {
+        clock = System.currentTimeMillis()
+        if (timer.runningSince != null) while (TimerMath.remaining(timer.remainingMillis, timer.runningSince, clock) > 0) {
+            delay(1000)
+            clock = System.currentTimeMillis()
+        }
+    }
     val remaining = TimerMath.remaining(timer.remainingMillis, timer.runningSince, clock)
     val accent = categoryColors(Categories.STUDY).accent
     KairosCard(accent = accent) {

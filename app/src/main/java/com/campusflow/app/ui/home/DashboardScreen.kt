@@ -21,23 +21,26 @@ import com.campusflow.app.ui.academic.EvaluationRow
 import com.campusflow.app.ui.theme.categoryColors
 
 @Composable
-fun DashboardScreen(activities: List<ActivityItem>, now: LocalDateTime, remindersReady: Boolean, onOpen: (ActivityItem) -> Unit, onComplete: (ActivityItem) -> Unit, onAdd: () -> Unit, onReminders: () -> Unit, evaluations: List<EvaluationWithTopics>, onEvaluation: (EvaluationWithTopics) -> Unit, displayName: String, subjects: List<Subject>, studyRecords: List<StudyRecord>, onSchedule: () -> Unit, onStudy: () -> Unit, onWorkout: () -> Unit, onSubject: (Subject) -> Unit) {
+fun DashboardScreen(activities: List<ActivityItem>, now: LocalDateTime, remindersReady: Boolean, onOpen: (ActivityItem) -> Unit, onComplete: (ActivityItem) -> Unit, onAdd: () -> Unit, onReminders: () -> Unit, evaluations: List<EvaluationWithTopics>, onEvaluation: (EvaluationWithTopics) -> Unit, displayName: String, subjects: List<Subject>, studyRecords: List<StudyRecord>, onSchedule: () -> Unit, onStudy: () -> Unit, onWorkout: () -> Unit, onSubject: (Subject) -> Unit, onPending: () -> Unit) {
     val today = now.toLocalDate()
-    val daily = activities.filter { it.occurrence.day == today.toEpochDay() }
+    val zone = java.time.ZoneId.systemDefault()
+    val effective = remember(activities) { HomeRules.effectiveActivities(activities) }
+    val daily = remember(effective, today) { effective.filter { it.occurrence.day == today.toEpochDay() } }
+    val classes = remember(daily, today) { HomeRules.classesToday(daily, today.toEpochDay()) }
+    val pendingEvaluations = remember(evaluations) { HomeRules.pendingEvaluations(evaluations) }
     val weekStart = CalendarRules.weekStart(today).toEpochDay()
-    val weekly = activities.filter { it.occurrence.day in weekStart..weekStart + 6 }
-    val upcoming = remember(evaluations, today) { AcademicRules.upcoming(evaluations, today.toEpochDay()).take(3) }
-    val next = remember(activities, now) {
-        val stamp = now.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-        activities.filter { it.occurrence.status == Status.PENDING && CalendarRules.instant(it.occurrence.day, it.occurrence.minute) + it.schedule.durationMinutes * 60_000L > stamp }.take(3)
+    val weeklyProgress = remember(effective, weekStart, zone) {
+        listOf(Categories.STUDY, Categories.WORKOUT).associateWith { HomeRules.weeklyProgress(effective, weekStart, it, zone) }
     }
+    val upcoming = remember(evaluations, today) { AcademicRules.upcoming(evaluations, today.toEpochDay()).take(3) }
+    val next = remember(effective, now, zone) { HomeRules.nextActivities(effective, now, zone) }
     val nextIds = next.map { it.occurrence.id }.toSet()
     val overdue = activities.filter { it.occurrence.day < today.toEpochDay() && it.occurrence.status == Status.PENDING && it.occurrence.id !in nextIds }
-    val studyMinutes = remember(studyRecords, today) { studyRecords.filter { java.time.Instant.ofEpochMilli(it.completedAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate() == today }.sumOf { it.seconds } / 60 }
+    val studyMinutes = remember(studyRecords, today, zone) { studyRecords.filter { java.time.Instant.ofEpochMilli(it.completedAt).atZone(zone).toLocalDate() == today }.sumOf { it.seconds } / 60 }
     var showOverdue by rememberSaveable { mutableStateOf(false) }
     LazyColumn(contentPadding = PaddingValues(20.dp, 12.dp, 20.dp, 100.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         item { WelcomeCard(now, displayName, onAdd) }
-        item { HomeSummary(daily.count { it.schedule.category == Categories.UNIVERSITY }, evaluations.count { !it.evaluation.completed && it.evaluation.type in setOf("TAREA", "PROYECTO", "EXPOSICION") }, studyMinutes, daily.count { it.schedule.category == Categories.WORKOUT }, onSchedule, onStudy, onWorkout) }
+        item { HomeSummary(classes, pendingEvaluations.size, studyMinutes, daily.count { it.schedule.category == Categories.WORKOUT }, onSchedule, onStudy, onWorkout, onPending) }
         item { Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Próximas actividades", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
             TextButton(onClick = onSchedule) { Text("Ver horario") }
@@ -97,13 +100,7 @@ fun DashboardScreen(activities: List<ActivityItem>, now: LocalDateTime, reminder
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                     listOf(Categories.STUDY to "Estudio", Categories.WORKOUT to "Entrenamientos").forEach { (category, label) ->
                         val accent = categoryColors(category).accent
-                        val entries = weekly.filter { it.schedule.category == category }
-                        val completed = activities.count {
-                            it.schedule.category == category && it.occurrence.status == Status.DONE && it.occurrence.completedAt?.let { stamp ->
-                                java.time.Instant.ofEpochMilli(stamp).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toEpochDay() in weekStart..weekStart + 6
-                            } == true
-                        }
-                        val total = maxOf(entries.size, completed)
+                        val (completed, total) = weeklyProgress.getValue(category)
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text(label, style = MaterialTheme.typography.bodyMedium)
