@@ -202,6 +202,39 @@ class RepositoryTest {
         assertEquals(Status.DONE, repo.dao.occurrence(items[0].id)!!.status)
     }
 
+    @Test fun reviewedImportIsIdempotentWithoutCollapsingManualClasses() = runBlocking {
+        val today = LocalDate.now().toEpochDay()
+        val day = LocalDate.now().dayOfWeek.value.toString()
+        val value = Schedule(title = "Cálculo importado", category = Categories.UNIVERSITY, startDay = today, startMinute = 480, durationMinutes = 60, repeat = "WEEKLY", weekdays = day, reminderMinutes = -1)
+        repo.importReviewedSchedules(listOf(value, value))
+        val initial = repo.activities.first()
+        repo.importReviewedSchedules(listOf(value))
+        assertEquals(initial, repo.activities.first())
+        assertEquals(1, repo.recurringSchedules.first().size)
+        assertEquals(1, com.campusflow.app.domain.HomeRules.classesToday(repo.activities.first(), today))
+        repo.saveSchedule(value)
+        assertEquals(2, com.campusflow.app.domain.HomeRules.classesToday(repo.activities.first(), today))
+        val imported = initial.first()
+        repo.editOccurrence(imported.occurrence.id, imported.schedule.copy(title = "Excepción", startDay = imported.occurrence.day))
+        repo.generate()
+        assertEquals(2, com.campusflow.app.domain.HomeRules.classesToday(repo.activities.first(), today))
+        repo.cancel(imported.occurrence.id)
+        assertEquals(1, com.campusflow.app.domain.HomeRules.classesToday(repo.activities.first(), today))
+    }
+
+    @Test fun batchImportGeneratesOnceAndRollsBackInvalidClass() = runBlocking {
+        val today = LocalDate.now().toEpochDay()
+        var notifications = 0
+        val importer = CampusRepository(db) { notifications++ }
+        val value = Schedule(title = "Clase", category = Categories.UNIVERSITY, startDay = today, startMinute = 480, durationMinutes = 60, repeat = "WEEKLY", weekdays = "1")
+        importer.importReviewedSchedules(listOf(value, value.copy(title = "Otra clase", startMinute = 600)))
+        assertEquals(1, notifications)
+        val before = repo.activities.first()
+        try { importer.importReviewedSchedules(listOf(value.copy(title = "Nueva"), value.copy(title = "Inválida", durationMinutes = 0))); fail("Invalid import") } catch (_: IllegalArgumentException) { }
+        assertEquals(before, repo.activities.first())
+        assertEquals(1, notifications)
+    }
+
     @Test fun editingOneMovedOccurrencePreservesHistoryWithoutRegeneration() = runBlocking {
         val today = LocalDate.now().toEpochDay()
         repo.saveSchedule(Schedule(title = "Rutina original", category = Categories.WORKOUT, startDay = today, startMinute = 900, durationMinutes = 50, repeat = "DAILY"))

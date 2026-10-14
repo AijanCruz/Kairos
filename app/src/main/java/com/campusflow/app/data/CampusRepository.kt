@@ -32,7 +32,9 @@ class CampusRepository(val db: CampusDatabase, private val onChanged: () -> Unit
         }
     }
 
-    suspend fun saveSchedule(value: Schedule): Long {
+    suspend fun saveSchedule(value: Schedule): Long = saveSchedule(value, materialize = true, notify = true)
+
+    private suspend fun saveSchedule(value: Schedule, materialize: Boolean, notify: Boolean): Long {
         require(value.title.isNotBlank()) { "Escribe un nombre." }
         require(value.startMinute in 0..1439 && value.durationMinutes in 1..1440) { "Revisa la hora y la duración (1–1440 min)." }
         require(value.reminderMinutes in com.campusflow.app.domain.ReminderOptions) { "Recordatorio inválido." }
@@ -66,12 +68,37 @@ class CampusRepository(val db: CampusDatabase, private val onChanged: () -> Unit
                     dao.updateOccurrence(it.copy(minute = value.startMinute, status = if (it.originalDay in valid) Status.PENDING else Status.CANCELLED))
                 }
             }
-            generate()
+            if (materialize) generate()
             actualId
         }
-        onChanged()
+        if (notify) onChanged()
         return result
     }
+
+    /** Only deduplicate reviewed OCR rules, never distinct activities entered by hand. */
+    suspend fun importReviewedSchedules(values: List<Schedule>) {
+        db.withTransaction {
+            val existing = dao.activeSchedules().toMutableList()
+            var changed = false
+            values.forEach { draft ->
+                require(draft.category == Categories.UNIVERSITY && draft.repeat == Repeat.WEEKLY.name)
+                val value = draft.copy(id = 0, title = draft.title.trim(), notes = IMPORT_NOTES)
+                val duplicate = existing.any { old ->
+                    old.notes == IMPORT_NOTES && old.startDay <= value.startDay &&
+                        old.copy(id = 0, startDay = value.startDay) == value
+                }
+                if (!duplicate) {
+                    val id = saveSchedule(value, materialize = false, notify = false)
+                    existing += value.copy(id = id)
+                    changed = true
+                }
+            }
+            if (changed) generate()
+        }
+        onChanged()
+    }
+
+    companion object { const val IMPORT_NOTES = "Importado desde una imagen y revisado." }
 
     suspend fun addSubject(name: String): Long {
         val trimmed = name.trim()

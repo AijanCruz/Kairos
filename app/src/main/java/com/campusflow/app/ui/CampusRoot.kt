@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.Lifecycle
 import androidx.core.app.NotificationManagerCompat
 import com.campusflow.app.ui.academic.AcademicScreen
+import com.campusflow.app.ui.academic.PendingEvaluationsScreen
 import com.campusflow.app.ui.components.ProfileDialog
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -69,7 +70,6 @@ fun CampusRoot(vm: AppViewModel) {
     val routines by vm.routines.collectAsStateWithLifecycle()
     val saving by vm.saving.collectAsStateWithLifecycle()
     val saveError by vm.saveError.collectAsStateWithLifecycle()
-    val now by vm.now.collectAsStateWithLifecycle()
     val profileSaving by vm.profileSaving.collectAsStateWithLifecycle()
     val profileError by vm.profileError.collectAsStateWithLifecycle()
     var addMenu by remember { mutableStateOf(false) }
@@ -145,9 +145,10 @@ fun CampusRoot(vm: AppViewModel) {
                             editOccurrenceId = null; baseEditor = true; editor = true
                         }) { from, to -> vm.perform { vm.repository.generateRange(from, to) } }
                         else if (destination.route == "home") {
+                            val now by vm.now.collectAsStateWithLifecycle()
                             val records by vm.studyRecords.collectAsStateWithLifecycle()
                             DashboardScreen(activities, now, remindersReady && preferences.notifications, { detailId = it.occurrence.id }, vm::complete, { addMenu = true }, { nav.navigate("settings") }, evaluations, { nav.navigate("academics/${it.evaluation.subjectId}/${it.evaluation.id}") }, preferences.displayName, subjects, records,
-                                { nav.navigate("schedule") { launchSingleTop = true } }, { nav.navigate("study") { launchSingleTop = true } }, { nav.navigate("workout") { launchSingleTop = true } }, { nav.navigate("academics/${it.id}/0") })
+                                { nav.navigate("schedule") { launchSingleTop = true } }, { nav.navigate("study") { launchSingleTop = true } }, { nav.navigate("workout") { launchSingleTop = true } }, { nav.navigate("academics/${it.id}/0") }, { nav.navigate("academics/pending") { launchSingleTop = true } })
                         }
                         else if (destination.route == "study") StudyScreen(vm, activities, subjects, { detailId = it.occurrence.id }, { subjectId, minutes ->
                             initial = Schedule(title = "", category = Categories.STUDY, startDay = java.time.LocalDate.now().toEpochDay(), startMinute = 16 * 60, durationMinutes = minutes, subjectId = subjectId, reminderMinutes = preferences.reminderMinutes)
@@ -164,6 +165,10 @@ fun CampusRoot(vm: AppViewModel) {
                             EmptyState("Un espacio para organizarte", "Tus actividades aparecerán aquí.", destination.icon)
                         }
                     }
+                }
+                composable("academics/pending") {
+                    val now by vm.now.collectAsStateWithLifecycle()
+                    PendingEvaluationsScreen(evaluations, now.toLocalDate().toEpochDay(), { nav.popBackStack() }, { nav.navigate("academics/${it.evaluation.subjectId}/${it.evaluation.id}") })
                 }
                 composable("academics/{subjectId}/{evaluationId}") { academicEntry ->
                     AcademicScreen(vm, academicEntry.arguments?.getString("subjectId")?.toLongOrNull() ?: 0, academicEntry.arguments?.getString("evaluationId")?.toLongOrNull() ?: 0) { nav.popBackStack() }

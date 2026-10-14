@@ -62,10 +62,12 @@ class AppUiTest {
         val item = awaitActivity(title)
         ownedSchedules += item.schedule.id
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Guardar").fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(15_000) { compose.onAllNodesWithText("Actividad guardada").fetchSemanticsNodes().isEmpty() }
         compose.onNode(hasScrollAction() and !hasAnyAncestor(hasScrollAction())).performScrollToNode(hasText(title))
         awaitText(title)
         capture("activity-flow.png")
         compose.onNodeWithText(title).performClick()
+        awaitText("Completar")
         compose.onNodeWithText("Completar").performScrollTo().performClick()
         awaitText("DESHACER")
         compose.onNodeWithText("DESHACER").performClick()

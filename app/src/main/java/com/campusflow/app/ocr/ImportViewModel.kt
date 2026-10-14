@@ -52,10 +52,11 @@ class ImportViewModel(application: Application, private val saved: SavedStateHan
             try {
                 val reminder = app.preferences.flow.first().reminderMinutes
                 app.database.withTransaction {
-                    entries.distinctBy { listOf(it.title.trim(), it.weekday, it.startMinute, it.endMinute) }.forEach { detected ->
+                    val schedules = entries.distinctBy { listOf(it.title.trim(), it.weekday, it.startMinute, it.endMinute) }.map { detected ->
                         val subjectId = app.repository.addSubject(detected.title)
-                        app.repository.saveSchedule(Schedule(title = detected.title, category = Categories.UNIVERSITY, startDay = startDay, startMinute = detected.startMinute!!, durationMinutes = detected.endMinute!! - detected.startMinute, repeat = "WEEKLY", weekdays = detected.weekday.toString(), reminderMinutes = reminder, subjectId = subjectId, notes = "Importado desde una imagen y revisado."))
+                        Schedule(title = detected.title, category = Categories.UNIVERSITY, startDay = startDay, startMinute = detected.startMinute!!, durationMinutes = detected.endMinute!! - detected.startMinute, repeat = "WEEKLY", weekdays = detected.weekday.toString(), reminderMinutes = reminder, subjectId = subjectId)
                     }
+                    app.repository.importReviewedSchedules(schedules)
                 }
                 update(emptyList()); saved["text"] = ""; onSaved()
             } catch (cancel: CancellationException) { throw cancel }

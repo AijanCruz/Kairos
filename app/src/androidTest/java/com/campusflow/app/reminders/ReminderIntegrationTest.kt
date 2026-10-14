@@ -41,6 +41,26 @@ class ReminderIntegrationTest {
             }
             val state = app.database.dao().reminderStates().first { it.occurrenceId == item.occurrence.id }
             assertTrue(state.delivered)
+            val notification = manager.activeNotifications.first { it.tag == "activity-${item.occurrence.id}" }.notification
+            assertEquals(com.campusflow.app.R.drawable.ic_notification, notification.smallIcon.resId)
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                automation.executeShellCommand("input keyevent KEYCODE_HOME").close()
+                delay(3000)
+                automation.executeShellCommand("cmd statusbar expand-notifications").close()
+                delay(1000)
+                automation.takeScreenshot()?.let { bitmap ->
+                    try {
+                        val values = android.content.ContentValues().apply {
+                            put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, "kairos-241-notification.png")
+                            put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png")
+                            put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/KairosMaintenance")
+                        }
+                        val uri = requireNotNull(app.contentResolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values))
+                        requireNotNull(app.contentResolver.openOutputStream(uri)).use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                    } finally { bitmap.recycle() }
+                }
+                automation.executeShellCommand("cmd statusbar collapse").close()
+            }
             var duplicate = false
             app.reminders.deliver(item.occurrence.id, state.triggerAt) { duplicate = true }
             assertFalse(duplicate)

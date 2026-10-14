@@ -1,5 +1,78 @@
 # Kairos — registro de desarrollo
 
+## Kairos 2.4.1 — mantenimiento
+
+VersionName 2.4.1; versionCode 2 (antes 1 en el repositorio). Sin migración:
+Room sigue en v5. Se conserva el diseño 2.4.0, el launcher y los datos actuales.
+
+### Errores reproducidos y correcciones
+
+- La tarjeta Entregas pendientes tenía el callback de materias y contaba solo
+  TAREA/PROYECTO/EXPOSICION. Ahora contador y listado usan HomeRules.pendingEvaluations:
+  todos los tipos no completados, de todas las materias, incluidas vencidas,
+  por fecha/ID. Una nota no modifica la condición pendiente. Se reutilizan
+  EvaluationRow y el detalle académico existente; estado vacío verificado.
+- Reimportar un mismo horario OCR creaba otra serie activa idéntica. La importación
+  revisada es idempotente para reglas importadas iguales cubiertas por la fecha
+  inicial; no agrupa clases manuales ni elimina datos previos. Test de regresión
+  reproduce dos importaciones, verifica una clase y conserva otra clase manual.
+- Clases hoy se deriva de las ocurrencias efectivas UNIVERSITY del día local,
+  omitiendo canceladas y repeticiones del mismo ID. Las excepciones independientes,
+  clases completadas y traslados se conservan; no se deduplica por título/hora.
+  La consulta Room ya excluía cancelaciones y no unía reglas con ocurrencias.
+- El progreso semanal podía mostrar 100 % con pendientes al completar actividades
+  antiguas: max(programadas,completadas) era un denominador incorrecto. Ahora usa
+  completadas realmente esta semana + pendientes programadas esta semana.
+- ic_notification.xml contenía el símbolo CampusFlow: sustituido por K blanca
+  sin fondo. La búsqueda específica encontró un único NotificationCompat.Builder,
+  que ya referencia el mismo recurso. No se modificó la lógica de recordatorios.
+
+### Rendimiento enfocado
+
+- El reloj de Inicio ya no se recolecta en CampusRoot: evita invalidar el árbol
+  global cada 15 s. Se recolecta en las pantallas que necesitan la hora.
+- Filtros diarios/progreso semanal se memorizan por datos, fecha y zona horaria.
+  Próximas actividades usa una secuencia, descarta pasadas y termina tras tres,
+  en lugar de resolver los instantes de toda la colección en cada tick.
+- Microbenchmark JVM HomeRulesTest, 5000 filas, mediana de 15 iteraciones tras
+  calentamiento: antes 588800 ns; después 23000 ns. Es una medición del cálculo,
+  no de jank ni rendimiento de frames en Android.
+- OCR genera el horizonte una vez por lote y notifica una vez tras éxito,
+  conservando transacción y revisión obligatoria. Antes lo regeneraba por clase.
+- Timer visible: actualización cada segundo solo mientras corre y queda tiempo;
+  antes ejecutaba un ciclo de 250 ms también pausado o vencido.
+
+### Verificaciones observadas
+
+- assembleDebug, testDebugUnitTest y lintDebug correctos: **61 tests JVM**, 0 fallos.
+  Lint: 0 errores; avisos anteriores de dependencias/launcher sin cambios.
+- Primera suite Android completa en emulador API 35: 58/60 entradas aprobadas;
+  un test nuevo tenía retorno no-void y un test UI no esperaba el Snackbar.
+  Se corrigieron los tests y su reejecución dirigida aprobó 5/5.
+- Tras el último ajuste de progreso: 4/4 regresiones dirigidas de Inicio e icono/
+  entrega de alarma correctas; la captura de notificación se repitió con 1/1.
+  En conjunto quedaron aprobados los 61 tests Android reales de la suite,
+  contando las reejecuciones, no una nueva ejecución completa final.
+- La suite cubrió Room/series/excepciones, notas/metas/temas, migraciones, backups
+  completos y antiguos con rollback, timer, rutinas, OCR real, perfil, navegación,
+  cuadrícula, deduplicación y rechazo de alarmas obsoletas. No se inventan nuevos
+  defectos en las áreas que aprobaron sus regresiones.
+- K renderizada a 24 px con márgenes transparentes y verificada como smallIcon de
+  una notificación Android real. Captura: verification/kairos-241-notification.png.
+- APK: dist/Kairos-2.4.1-debug.apk; manifest empaquetado verificado (API mínima 26,
+  versionName 2.4.1, versionCode 2, label Kairos). Sin commits ni push.
+
+### Pendientes/límites
+
+No se inspeccionó la base personal del teléfono: la causa exacta de sus dos clases
+no está demostrada. Las reglas duplicadas ya persistidas no se borran ni se ocultan.
+Se corrigió una causa reproducible de nuevas duplicaciones por importación; si
+el caso persiste, requiere identificar esos registros concretos.
+No se repitieron reinicios/zonas horarias reales, permisos de batería de Samsung
+ni profiling de frames/heap. No se afirma una mejora global de fluidez medida.
+
+---
+
 ## Rediseño visual y perfil local
 
 Referencias: `Interfaces_nuevas/Kairos Productivity Dashboard.png` y
