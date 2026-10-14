@@ -15,6 +15,8 @@ import com.campusflow.app.domain.*
 import com.campusflow.app.ui.AppViewModel
 import com.campusflow.app.ui.components.*
 import java.time.LocalDate
+import androidx.compose.foundation.BorderStroke
+import com.campusflow.app.ui.theme.categoryColors
 
 @Composable
 fun WorkoutScreen(vm: AppViewModel, activities: List<ActivityItem>, routines: List<RoutineWithExercises>, onOpen: (ActivityItem) -> Unit, onAssign: (WorkoutRoutine) -> Unit) {
@@ -50,9 +52,11 @@ fun WorkoutScreen(vm: AppViewModel, activities: List<ActivityItem>, routines: Li
             }
         }
         items(routines, key = { "routine-${it.routine.id}" }) { routine ->
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)) {
+            Card(shape = MaterialTheme.shapes.medium, border = BorderStroke(1.dp, categoryColors(Categories.WORKOUT).accent.copy(alpha = .25f)), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row {
+                        IconBadge(Icons.Outlined.FitnessCenter, categoryColors(Categories.WORKOUT).accent)
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(routine.routine.name, style = MaterialTheme.typography.titleLarge)
                             Text("${routine.routine.minutes} min · ${routine.exercises.size} ejercicios", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -95,7 +99,9 @@ private fun ExerciseList(routine: RoutineWithExercises) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         routine.exercises.sortedBy { it.position }.forEachIndexed { index, exercise ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("%02d".format(index + 1), color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 3.dp))
+                Surface(shape = MaterialTheme.shapes.extraSmall, color = categoryColors(Categories.WORKOUT).container) {
+                    Text("%02d".format(index + 1), color = categoryColors(Categories.WORKOUT).accent, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(10.dp))
+                }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(exercise.name, style = MaterialTheme.typography.titleSmall)
                     Text("${exercise.sets} series · ${exercise.reps} reps · ${exercise.restSeconds}s descanso${if (exercise.weight.isNotBlank()) " · ${exercise.weight}" else ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -24,7 +24,12 @@ class AppUiTest {
     private val ownedSchedules = mutableSetOf<Long>()
     private val ownedRoutines = mutableSetOf<Long>()
     private lateinit var oldAppearance: Appearance
-    @Before fun prepare() = runBlocking { oldAppearance = app.preferences.flow.first().appearance }
+    private lateinit var oldProfile: UserPreferences
+    @Before fun prepare() = runBlocking {
+        oldProfile = app.preferences.flow.first()
+        oldAppearance = oldProfile.appearance
+        if (!oldProfile.welcomeCompleted) app.preferences.setProfile(oldProfile.displayName)
+    }
     @After fun clean() = runBlocking {
         val application = app
         ownedSchedules.forEach { id ->
@@ -36,6 +41,7 @@ class AppUiTest {
             ownedRoutines.forEach { application.database.openHelper.writableDatabase.execSQL("DELETE FROM routines WHERE id = ?", arrayOf(it)) }
         }
         application.preferences.setAppearance(oldAppearance)
+        application.preferences.setProfile(oldProfile.displayName, oldProfile.welcomeCompleted)
     }
     private fun awaitText(text: String) {
         compose.waitUntil(30_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
@@ -56,7 +62,7 @@ class AppUiTest {
         val item = awaitActivity(title)
         ownedSchedules += item.schedule.id
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Guardar").fetchSemanticsNodes().isEmpty() }
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(title))
+        compose.onNode(hasScrollAction() and !hasAnyAncestor(hasScrollAction())).performScrollToNode(hasText(title))
         awaitText(title)
         capture("activity-flow.png")
         compose.onNodeWithText(title).performClick()
@@ -107,17 +113,17 @@ class AppUiTest {
             Schedule(title = "Cálculo y Álgebra Lineal", category = Categories.UNIVERSITY, startDay = today, startMinute = 1020, durationMinutes = 230, reminderMinutes = -1),
         ).forEach { ownedSchedules += app.repository.saveSchedule(it) }
         app.preferences.setAppearance(Appearance.LIGHT)
-        awaitText("Programación II")
+        compose.onNode(hasScrollAction() and !hasAnyAncestor(hasScrollAction())).performScrollToNode(hasText("Programación II"))
         capture("home-light.png")
         compose.onNodeWithContentDescription("Configuración").performClick()
-        compose.onNodeWithContentDescription("Color dinámico").assertIsToggleable()
-        compose.onNodeWithText("Tema", useUnmergedTree = true).performClick()
+        compose.onNodeWithContentDescription("Color dinámico").performScrollTo().assertIsToggleable()
+        compose.onNodeWithText("Tema", useUnmergedTree = true).performScrollTo().performClick()
         compose.onNodeWithText("Oscuro").performClick()
         compose.waitUntil(10_000) { runBlocking { app.preferences.flow.first().appearance == Appearance.DARK } }
         compose.activityRule.scenario.recreate()
         compose.onNodeWithText("Oscuro").assertExists()
         compose.onNodeWithText("Volver").performClick()
-        awaitText("Programación II")
+        compose.onNode(hasScrollAction() and !hasAnyAncestor(hasScrollAction())).performScrollToNode(hasText("Programación II"))
         capture("home-dark.png")
         compose.onNodeWithText("Horario").performClick()
         compose.onNodeWithText("Tu semana").assertExists()

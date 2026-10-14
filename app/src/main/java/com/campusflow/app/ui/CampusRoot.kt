@@ -36,6 +36,15 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.Lifecycle
 import androidx.core.app.NotificationManagerCompat
 import com.campusflow.app.ui.academic.AcademicScreen
+import com.campusflow.app.ui.components.ProfileDialog
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 private data class Destination(val route: String, val label: String, val icon: ImageVector)
 private val destinations = listOf(
@@ -61,6 +70,8 @@ fun CampusRoot(vm: AppViewModel) {
     val saving by vm.saving.collectAsStateWithLifecycle()
     val saveError by vm.saveError.collectAsStateWithLifecycle()
     val now by vm.now.collectAsStateWithLifecycle()
+    val profileSaving by vm.profileSaving.collectAsStateWithLifecycle()
+    val profileError by vm.profileError.collectAsStateWithLifecycle()
     var addMenu by remember { mutableStateOf(false) }
     var editor by rememberSaveable { mutableStateOf(false) }
     var baseEditor by rememberSaveable { mutableStateOf(false) }
@@ -77,6 +88,7 @@ fun CampusRoot(vm: AppViewModel) {
     val scope = rememberCoroutineScope()
     var remindersReady by remember { mutableStateOf(false) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        vm.refreshClock()
         remindersReady = NotificationManagerCompat.from(vm.container).areNotificationsEnabled() && vm.container.reminders.exactAllowed()
         vm.container.refreshReminders()
     }
@@ -90,18 +102,25 @@ fun CampusRoot(vm: AppViewModel) {
         }
     }
     CampusTheme(preferences) {
+        val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+        if (preferences.loaded && !preferences.welcomeCompleted) ProfileDialog(preferences.displayName, true, profileSaving, profileError, { vm.saveProfile(it) }, { vm.saveProfile("") })
         Scaffold(
             snackbarHost = { SnackbarHost(snackbar) },
             floatingActionButton = {
-                if (route != "settings" && route != "import" && !route.startsWith("academics/")) FloatingActionButton(onClick = { addMenu = true }, containerColor = MaterialTheme.colorScheme.primaryContainer) { Icon(Icons.Outlined.Add, "Agregar") }
+                if (route != "settings" && route != "import" && !route.startsWith("academics/")) FloatingActionButton(onClick = { addMenu = true }, shape = CircleShape, containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) { Icon(Icons.Outlined.Add, "Agregar") }
             },
             topBar = {
-                TopAppBar(title = { Text("Kairos", style = MaterialTheme.typography.titleLarge) }, actions = {
-                    IconButton(onClick = { nav.navigate("settings") { launchSingleTop = true } }) { Icon(Icons.Outlined.Settings, "Configuración") }
+                TopAppBar(title = { Column { Text("Kairos", style = MaterialTheme.typography.headlineMedium); Text("Tu día, con intención.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }, actions = {
+                    IconButton(onClick = { vm.perform { vm.container.preferences.setAppearance(if (dark) Appearance.LIGHT else Appearance.DARK) } }) { Icon(if (dark) Icons.Outlined.LightMode else Icons.Outlined.DarkMode, if (dark) "Usar modo claro" else "Usar modo oscuro") }
+                    IconButton(onClick = { nav.navigate("settings") { launchSingleTop = true } }, modifier = Modifier.semantics { contentDescription = "Configuración" }) {
+                        Surface(Modifier.size(36.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                            Box(contentAlignment = Alignment.Center) { if (preferences.displayName.isBlank()) Icon(Icons.Outlined.PersonOutline, null) else Text(preferences.displayName.take(1).uppercase(), style = MaterialTheme.typography.titleMedium) }
+                        }
+                    }
                 })
             },
             bottomBar = {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                NavigationBar(modifier = Modifier.clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)), containerColor = MaterialTheme.colorScheme.surfaceContainerLowest, tonalElevation = 0.dp) {
                     destinations.forEach { destination ->
                         NavigationBarItem(selected = route == destination.route || (destination.route == "study" && route.startsWith("academics/")), onClick = {
                             nav.navigate(destination.route) {
@@ -111,7 +130,7 @@ fun CampusRoot(vm: AppViewModel) {
                                 // evaluation opened from that same tab.
                                 restoreState = destination.route != "home"
                             }
-                        }, icon = { Icon(destination.icon, destination.label) }, label = { Text(destination.label) })
+                        }, icon = { Icon(destination.icon, destination.label) }, label = { Text(destination.label) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary, indicatorColor = MaterialTheme.colorScheme.primaryContainer))
                     }
                 }
             },
@@ -125,7 +144,11 @@ fun CampusRoot(vm: AppViewModel) {
                             initial = Schedule(title = "", category = Categories.UNIVERSITY, startDay = start.toEpochDay(), startMinute = minute, durationMinutes = 60, repeat = "WEEKLY", weekdays = day.toString(), reminderMinutes = preferences.reminderMinutes)
                             editOccurrenceId = null; baseEditor = true; editor = true
                         }) { from, to -> vm.perform { vm.repository.generateRange(from, to) } }
-                        else if (destination.route == "home") DashboardScreen(activities, now, remindersReady && preferences.notifications, { detailId = it.occurrence.id }, vm::complete, { addMenu = true }, { nav.navigate("settings") }, evaluations, { nav.navigate("academics/${it.evaluation.subjectId}/${it.evaluation.id}") })
+                        else if (destination.route == "home") {
+                            val records by vm.studyRecords.collectAsStateWithLifecycle()
+                            DashboardScreen(activities, now, remindersReady && preferences.notifications, { detailId = it.occurrence.id }, vm::complete, { addMenu = true }, { nav.navigate("settings") }, evaluations, { nav.navigate("academics/${it.evaluation.subjectId}/${it.evaluation.id}") }, preferences.displayName, subjects, records,
+                                { nav.navigate("schedule") { launchSingleTop = true } }, { nav.navigate("study") { launchSingleTop = true } }, { nav.navigate("workout") { launchSingleTop = true } }, { nav.navigate("academics/${it.id}/0") })
+                        }
                         else if (destination.route == "study") StudyScreen(vm, activities, subjects, { detailId = it.occurrence.id }, { subjectId, minutes ->
                             initial = Schedule(title = "", category = Categories.STUDY, startDay = java.time.LocalDate.now().toEpochDay(), startMinute = 16 * 60, durationMinutes = minutes, subjectId = subjectId, reminderMinutes = preferences.reminderMinutes)
                             editOccurrenceId = null; newCategory = Categories.STUDY; editor = true

@@ -40,8 +40,8 @@ fun ScheduleScreen(activities: List<ActivityItem>, recurringSchedules: List<Sche
             }
         }
         if (!agenda) {
-            Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Toca un bloque para editarlo o una hora libre para agregar. Desliza para ver todos los días y horas.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Tocá un bloque o una hora libre.", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(onClick = { onAddBlock(LocalDate.now().dayOfWeek.value, 8 * 60) }) { Text("+ Bloque semanal") }
             }
             WeeklyTimetableGrid(recurringSchedules, onOpenBlock, onAddBlock, Modifier.weight(1f).padding(horizontal = 12.dp))

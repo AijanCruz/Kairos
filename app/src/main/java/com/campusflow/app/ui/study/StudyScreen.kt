@@ -19,6 +19,8 @@ import com.campusflow.app.ui.AppViewModel
 import com.campusflow.app.ui.components.*
 import kotlinx.coroutines.delay
 import java.time.LocalDate
+import com.campusflow.app.ui.theme.categoryColors
+import com.campusflow.app.ui.theme.subjectAccent
 
 @Composable
 fun StudyScreen(vm: AppViewModel, activities: List<ActivityItem>, subjects: List<Subject>, onOpen: (ActivityItem) -> Unit, onAdd: (Long?, Int) -> Unit, onEvaluations: (Subject) -> Unit) {
@@ -57,15 +59,18 @@ fun StudyScreen(vm: AppViewModel, activities: List<ActivityItem>, subjects: List
         }
         if (subjects.isEmpty()) item { Text("Agrega tus materias y asócialas a tus clases o sesiones.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(subjects, key = { "subject-${it.id}" }) { subject ->
-            Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest, shape = MaterialTheme.shapes.medium) {
-                Column {
-                    Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            val accent = subjectAccent(subject.id)
+            val grades = remember(evaluations, subject.id) { AcademicRules.gradeSummary(evaluations.map { it.evaluation }, subject.id) }
+            KairosCard(accent = accent, onClick = { onEvaluations(subject) }) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconBadge(Icons.Outlined.School, accent)
                         Text(subject.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                         IconButton(onClick = { subjectId = subject.id; subjectName = subject.name; subjectDialog = true }) { Icon(Icons.Outlined.Edit, "Editar materia") }
                         IconButton(onClick = { deleteSubject = subject }) { Icon(Icons.Outlined.DeleteOutline, "Eliminar materia") }
                     }
-                    TextButton(onClick = { onEvaluations(subject) }, modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)) { Text("Evaluaciones de ${subject.name}") }
-                }
+                    Text(grades.weightedAverage?.let { "Promedio calificado: ${AcademicRules.numberLabel(it)} / 100" } ?: "Sin calificaciones con peso", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    LinearProgressIndicator(progress = { (grades.gradedPercentage / 100).toFloat() }, modifier = Modifier.fillMaxWidth(), color = accent, trackColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+                    TextButton(onClick = { onEvaluations(subject) }) { Text("Evaluaciones de ${subject.name}", color = accent) }
             }
         }
         if (subjects.isNotEmpty()) item {
@@ -119,10 +124,17 @@ private fun StudyTimerCard(timer: StudyTimer, title: String, onStart: () -> Unit
     var clock by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(timer) { while (true) { clock = System.currentTimeMillis(); delay(250) } }
     val remaining = TimerMath.remaining(timer.remainingMillis, timer.runningSince, clock)
-    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.large) {
-        Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    val accent = categoryColors(Categories.STUDY).accent
+    KairosCard(accent = accent) {
+        Column(Modifier.fillMaxWidth().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(TimerMath.display(remaining), style = MaterialTheme.typography.displayLarge, fontSize = 54.sp)
+            Box(Modifier.size(208.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(progress = { if (timer.totalMillis <= 0) 0f else ((timer.totalMillis - remaining).toFloat() / timer.totalMillis).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxSize(), color = accent, strokeWidth = 8.dp, trackColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(TimerMath.display(remaining), style = MaterialTheme.typography.displayMedium, fontSize = if (TimerMath.display(remaining).length > 5) 34.sp else 44.sp)
+                    Text(if (remaining == 0L) "Tiempo cumplido" else if (timer.runningSince == null) "En pausa" else "En enfoque", style = MaterialTheme.typography.labelMedium, color = accent)
+                }
+            }
             if (remaining == 0L) Text("Tiempo cumplido. ¡Buen trabajo!")
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (remaining > 0) OutlinedButton(onClick = if (timer.runningSince == null) onStart else onPause) { Text(if (timer.runningSince == null) "Iniciar" else "Pausar") }
